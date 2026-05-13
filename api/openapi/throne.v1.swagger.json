@@ -1,0 +1,29 @@
+{
+  "info": {
+    "title": "Throne API",
+    "version": "v1"
+  },
+  "paths": {
+    "/v1/captures/{capture_id}": {
+      "get": {
+        "summary": "Get capture"
+      }
+    },
+    "/v1/captures/{capture_id}/image-url": {
+      "post": {
+        "summary": "Create signed image URL"
+      }
+    },
+    "/v1/findings/{finding_id}": {
+      "get": {
+        "summary": "Get finding"
+      }
+    },
+    "/v1/users/{user_id}/captures": {
+      "get": {
+        "summary": "List captures"
+      }
+    }
+  },
+  "swagger": "2.0"
+}

@@ -1,0 +1,83 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: throne
+      POSTGRES_PASSWORD: throne
+      POSTGRES_DB: throne
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U throne -d throne"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  localstack:
+    image: localstack/localstack:3
+    environment:
+      SERVICES: s3,sqs,ssm,kms,dynamodb
+      DEFAULT_REGION: us-east-1
+      DEBUG: "0"
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack-data:/var/lib/localstack
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4566/_localstack/health | grep -q running"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./grafana/provisioning/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/modules/observability/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    command: ["-config.file=/etc/tempo.yaml"]
+    ports:
+      - "3200:3200"
+      - "4318:4318"
+    volumes:
+      - ./grafana/provisioning/tempo.yaml:/etc/tempo.yaml:ro
+
+  throne-ingest:
+    build:
+      context: .
+      dockerfile: cmd/throne-ingest/Dockerfile
+    environment:
+      THRONE_DATA_DIR: /data
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    volumes:
+      - app-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  localstack-data:
+  app-data:

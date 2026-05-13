@@ -1,0 +1,119 @@
+resource "aws_ecs_cluster" "this" {
+  name = var.cluster_name
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "this" {
+  name              = "/ecs/${var.name}"
+  retention_in_days = 30
+  tags              = var.tags
+}
+
+data "aws_iam_policy_document" "assume_task" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["ecs-tasks.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "execution" {
+  name               = "${var.name}-execution"
+  assume_role_policy = data.aws_iam_policy_document.assume_task.json
+  tags               = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "execution" {
+  role       = aws_iam_role.execution.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+resource "aws_iam_role" "task" {
+  name               = "${var.name}-task"
+  assume_role_policy = data.aws_iam_policy_document.assume_task.json
+  tags               = var.tags
+}
+
+resource "aws_ecs_task_definition" "this" {
+  family                   = var.name
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = var.cpu
+  memory                   = var.memory
+  execution_role_arn       = aws_iam_role.execution.arn
+  task_role_arn            = aws_iam_role.task.arn
+
+  container_definitions = jsonencode([
+    {
+      name         = var.name
+      image        = var.image
+      essential    = true
+      portMappings = [{ containerPort = var.container_port, protocol = "tcp" }]
+      environment  = [for key, value in var.environment : { name = key, value = value }]
+      secrets      = [for key, value in var.secrets : { name = key, valueFrom = value }]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.this.name
+          awslogs-region        = data.aws_region.current.name
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
+  tags = var.tags
+}
+
+data "aws_region" "current" {}
+
+resource "aws_ecs_service" "this" {
+  name            = var.name
+  cluster         = aws_ecs_cluster.this.id
+  task_definition = aws_ecs_task_definition.this.arn
+  desired_count   = var.desired_count
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = var.subnet_ids
+    security_groups  = var.security_group_ids
+    assign_public_ip = var.assign_public_ip
+  }
+
+  dynamic "load_balancer" {
+    for_each = var.target_group_arn == null ? [] : [var.target_group_arn]
+    content {
+      target_group_arn = load_balancer.value
+      container_name   = var.name
+      container_port   = var.container_port
+    }
+  }
+
+  lifecycle { ignore_changes = [desired_count] }
+  tags = var.tags
+}
+
+resource "aws_appautoscaling_target" "this" {
+  max_capacity       = var.autoscaling_max
+  min_capacity       = var.autoscaling_min
+  resource_id        = "service/${aws_ecs_cluster.this.name}/${aws_ecs_service.this.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+
+resource "aws_appautoscaling_policy" "cpu" {
+  name               = "${var.name}-cpu"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.this.resource_id
+  scalable_dimension = aws_appautoscaling_target.this.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.this.service_namespace
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification { predefined_metric_type = "ECSServiceAverageCPUUtilization" }
+    target_value = 60
+  }
+}

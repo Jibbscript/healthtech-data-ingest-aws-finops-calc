@@ -1,0 +1,42 @@
+name: proto
+
+on:
+  pull_request:
+    paths:
+      - 'api/proto/**'
+      - 'internal/gen/**'
+      - 'api/openapi/**'
+      - 'buf.yaml'
+      - 'buf.gen.yaml'
+      - '.github/workflows/proto.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'api/proto/**'
+      - 'internal/gen/**'
+      - 'api/openapi/**'
+      - 'buf.yaml'
+      - 'buf.gen.yaml'
+      - '.github/workflows/proto.yml'
+
+jobs:
+  proto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+      - uses: bufbuild/buf-setup-action@v1
+      - name: Lint proto
+        run: buf lint
+      - name: Breaking check against main
+        if: github.event_name == 'pull_request'
+        run: buf breaking --against '.git#branch=main'
+      - name: Generate deterministic PoC stubs
+        run: make proto
+      - name: Ensure generated files are committed
+        run: git diff --exit-code

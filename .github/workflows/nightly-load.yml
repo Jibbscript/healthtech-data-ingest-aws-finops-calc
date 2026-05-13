@@ -1,0 +1,40 @@
+name: nightly-load
+
+on:
+  schedule:
+    - cron: '23 8 * * *'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Load target URL
+        required: false
+        default: http://localhost:8080
+      duration:
+        description: Load duration
+        required: false
+        default: 1m
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+      - name: Build load generator if present
+        run: |
+          if [ -d cmd/throne-load ]; then
+            go build -o /tmp/throne-load ./cmd/throne-load
+          else
+            echo 'cmd/throne-load not present yet; phase 5 load generator deferred.'
+          fi
+      - name: Run nightly light load if present
+        run: |
+          if [ -x /tmp/throne-load ]; then
+            /tmp/throne-load --devices 10 --captures-per-device-per-day 3 --duration "${{ inputs.duration || '1m' }}" --target "${{ inputs.target || 'http://localhost:8080' }}"
+          else
+            echo 'Skipping load run because load generator is not materialized yet.'
+          fi

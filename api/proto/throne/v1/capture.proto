@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package throne.v1;
+
+import "google/protobuf/timestamp.proto";
+import "throne/v1/types.proto";
+
+option go_package = "github.com/jibbscript/throne-backend-poc/internal/gen/throne/v1;thronev1";
+
+service IngestService {
+  rpc Capture(stream CaptureChunk) returns (CaptureAck);
+}
+
+message CaptureMetadata {
+  string capture_uuid = 1;
+  string user_id = 2;
+  string device_id = 3;
+  google.protobuf.Timestamp captured_at = 4;
+  string content_type = 5;
+}
+
+message CaptureChunk {
+  oneof payload {
+    CaptureMetadata metadata = 1;
+    bytes data_chunk = 2; // Runtime max chunk size is 1 MiB.
+  }
+}
+
+message CaptureAck {
+  string capture_id = 1;
+  string s3_key = 2;
+  string content_hash = 3;
+  Capture capture = 4;
+}

@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package throne.v1;
+
+import "throne/v1/types.proto";
+
+option go_package = "github.com/jibbscript/throne-backend-poc/internal/gen/throne/v1;thronev1";
+
+service InferenceService {
+  rpc Infer(InferRequest) returns (InferResponse);
+}
+
+message InferRequest {
+  string capture_id = 1;
+  string s3_key = 2;
+  string model_version = 3;
+  string content_hash = 4;
+}
+
+message InferResponse {
+  Finding finding = 1;
+  double confidence = 2;
+}

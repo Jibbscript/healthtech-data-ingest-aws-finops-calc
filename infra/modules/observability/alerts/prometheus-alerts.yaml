@@ -1,0 +1,38 @@
+groups:
+  - name: throne-slo-alerts
+    rules:
+      - alert: IngestErrorRateHigh
+        expr: sum(rate(throne_ingest_requests_total{code!~"2.."}[5m])) / clamp_min(sum(rate(throne_ingest_requests_total[5m])), 1) > 0.01
+        for: 5m
+        labels: { severity: page, slo: ingest-availability }
+        annotations:
+          summary: Ingest error rate is above 1%.
+          runbook_url: docs/runbooks/ingest-error-rate.md
+      - alert: QueueAgeHigh
+        expr: max(throne_processor_queue_age_seconds) > 60
+        for: 2m
+        labels: { severity: page, slo: freshness }
+        annotations:
+          summary: Oldest queue message is older than 60 seconds.
+          runbook_url: docs/runbooks/queue-age.md
+      - alert: DLQDepthNonZero
+        expr: max(aws_sqs_approximate_number_of_messages_visible_average{queue_name=~".*dlq.*"}) > 0
+        for: 1m
+        labels: { severity: page, slo: durability }
+        annotations:
+          summary: Dead-letter queue has messages.
+          runbook_url: docs/runbooks/dlq-depth.md
+      - alert: InferenceP99High
+        expr: histogram_quantile(0.99, sum by (le) (rate(throne_inference_duration_seconds_bucket[5m]))) > 30
+        for: 5m
+        labels: { severity: ticket, slo: freshness }
+        annotations:
+          summary: Inference p99 is above 30 seconds.
+          runbook_url: docs/runbooks/inference-p99.md
+      - alert: PostgresConnectionSaturation
+        expr: max(throne_postgres_connections_used) / 100 > 0.8
+        for: 5m
+        labels: { severity: ticket, slo: api-availability }
+        annotations:
+          summary: Postgres connections above 80% of cap.
+          runbook_url: docs/runbooks/postgres-connections.md

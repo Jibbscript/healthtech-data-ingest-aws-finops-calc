@@ -1,0 +1,207 @@
+{
+  "uid": "throne-cost",
+  "title": "Throne Live Cost Dashboard",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "1m",
+  "tags": [
+    "throne",
+    "cost"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "dau",
+        "type": "custom",
+        "label": "DAU",
+        "query": "300,1000,10000,100000",
+        "current": {
+          "text": "300",
+          "value": "300"
+        }
+      },
+      {
+        "name": "s3_standard_per_gb_month",
+        "type": "constant",
+        "query": "0.023"
+      },
+      {
+        "name": "s3_ia_per_gb_month",
+        "type": "constant",
+        "query": "0.0125"
+      },
+      {
+        "name": "fargate_vcpu_hour",
+        "type": "constant",
+        "query": "0.04048"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Current captures/day",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(throne_processor_messages_processed_total{result=\"success\"}[1d]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Current bytes ingested/day",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(throne_storage_bytes_written_total{class=\"raw\"}[1d]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Extrapolated storage $/month",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "(sum(increase(throne_storage_bytes_written_total{class=\"raw\"}[1d])) / 1024 / 1024 / 1024) * 30 * ${s3_standard_per_gb_month}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "$/user/month at current burn",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "((sum(increase(throne_storage_bytes_written_total{class=\"raw\"}[1d])) / 1024 / 1024 / 1024) * 30 * ${s3_standard_per_gb_month}) / ${dau}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "24-month storage projection",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "(sum(increase(throne_storage_bytes_written_total{class=\"raw\"}[1d])) / 1024 / 1024 / 1024) * 30 * ${s3_standard_per_gb_month} * vector(1)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      }
+    }
+  ]
+}

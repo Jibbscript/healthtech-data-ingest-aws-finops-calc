@@ -1,0 +1,44 @@
+name: terraform
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+      - 'grafana/provisioning/**'
+      - '.github/workflows/terraform.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - 'grafana/provisioning/**'
+      - '.github/workflows/terraform.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/envs/dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive ../..
+      - name: Terraform init without backend
+        run: terraform init -backend=false
+      - name: Terraform validate
+        run: terraform validate
+      - name: TFLint
+        uses: terraform-linters/setup-tflint@v4
+      - name: Run tflint
+        run: |
+          cd ../..
+          tflint --init --config "$PWD/.tflint.hcl"
+          tflint --recursive --config "$PWD/.tflint.hcl"
+      - name: tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: infra
+          additional_args: --config-file infra/.tfsec.yml

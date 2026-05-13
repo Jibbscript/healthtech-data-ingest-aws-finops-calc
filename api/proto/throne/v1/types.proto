@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package throne.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/jibbscript/throne-backend-poc/internal/gen/throne/v1;thronev1";
+
+message User {
+  string id = 1;
+  string email = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+message Device {
+  string id = 1;
+  string user_id = 2;
+  string certificate_thumbprint = 3;
+  google.protobuf.Timestamp enrolled_at = 4;
+}
+
+message Capture {
+  string id = 1;
+  string user_id = 2;
+  string device_id = 3;
+  string s3_key = 4;
+  string content_hash = 5;
+  int64 size_bytes = 6;
+  string status = 7;
+  google.protobuf.Timestamp captured_at = 8;
+}
+
+message Finding {
+  string id = 1;
+  string capture_id = 2;
+  string user_id = 3;
+  string result = 4;
+  double confidence = 5;
+  string reason = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message FindingResult {
+  string label = 1;
+  double confidence = 2;
+  repeated string regions = 3;
+}
+
+message AuditEvent {
+  string id = 1;
+  string actor = 2;
+  string action = 3;
+  string resource = 4;
+  google.protobuf.Timestamp occurred_at = 5;
+}

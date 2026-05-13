@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package throne.v1;
+
+import "google/api/annotations.proto";
+import "throne/v1/types.proto";
+
+option go_package = "github.com/jibbscript/throne-backend-poc/internal/gen/throne/v1;thronev1";
+
+service ThroneAPI {
+  rpc ListCaptures(ListCapturesRequest) returns (ListCapturesResponse) {
+    option (google.api.http) = { get: "/v1/users/{user_id}/captures" };
+  }
+  rpc GetCapture(GetCaptureRequest) returns (GetCaptureResponse) {
+    option (google.api.http) = { get: "/v1/captures/{capture_id}" };
+  }
+  rpc GetFinding(GetFindingRequest) returns (GetFindingResponse) {
+    option (google.api.http) = { get: "/v1/findings/{finding_id}" };
+  }
+  rpc CreateImageURL(CreateImageURLRequest) returns (CreateImageURLResponse) {
+    option (google.api.http) = { post: "/v1/captures/{capture_id}/image-url" body: "*" };
+  }
+}
+
+message ListCapturesRequest { string user_id = 1; string cursor = 2; int32 page_size = 3; }
+message ListCapturesResponse { repeated Capture captures = 1; string next_cursor = 2; }
+message GetCaptureRequest { string capture_id = 1; }
+message GetCaptureResponse { Capture capture = 1; }
+message GetFindingRequest { string finding_id = 1; }
+message GetFindingResponse { Finding finding = 1; }
+message CreateImageURLRequest { string capture_id = 1; }
+message CreateImageURLResponse { string url = 1; int64 expires_in_seconds = 2; }
