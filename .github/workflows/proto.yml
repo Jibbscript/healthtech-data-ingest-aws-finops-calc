@@ -10,7 +10,7 @@ on:
       - 'buf.gen.yaml'
       - '.github/workflows/proto.yml'
   push:
-    branches: [main]
+    branches: [masta]
     paths:
       - 'api/proto/**'
       - 'internal/gen/**'

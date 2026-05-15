@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/jibbscript/throne-backend-poc/internal/store"
+	"log"
 	"os"
+
+	"github.com/jibbscript/throne-backend-poc/internal/store"
 )
 
 func main() {
@@ -12,7 +14,7 @@ func main() {
 		dataDir = ".data"
 	}
 	if err := store.New(dataDir).SeedDemo(); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	fmt.Println("seeded user_demo/device_demo")
 }

@@ -77,7 +77,7 @@ function normalizeApiResponse(raw: unknown): PricingSlice {
   if (typeof obj.sqs_request_per_million === 'number') slice.sqs = { requestPerMillion: obj.sqs_request_per_million };
   if (typeof obj.rds_instance_per_hour === 'number') slice.rds = { 'db.m6g.large': obj.rds_instance_per_hour };
   if (typeof obj.data_transfer_gb === 'number') slice.dataTransfer = { internetEgressPerGb: obj.data_transfer_gb };
-  return { ...(obj as PricingSlice), ...slice };
+  return slice;
 }
 
 function mergePricing(slices: PricingSlice[]): Pricing {

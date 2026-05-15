@@ -3,8 +3,6 @@ package loadsim
 import (
 	"bytes"
 	"crypto/rand"
-	"math"
-	mrand "math/rand"
 	"net/http"
 	"sync"
 	"time"
@@ -23,18 +21,6 @@ type Result struct {
 	Sent      int
 	Failed    int
 	Latencies []time.Duration
-}
-
-func PayloadSize(seed int64, meanBytes int) int {
-	if meanBytes <= 0 {
-		meanBytes = 5 * 1024 * 1024
-	}
-	r := mrand.New(mrand.NewSource(seed))
-	size := int(math.Exp(r.NormFloat64()*0.35 + math.Log(float64(meanBytes))))
-	if size < 1024 {
-		size = 1024
-	}
-	return size
 }
 
 func RandomPayload(n int) []byte { b := make([]byte, n); _, _ = rand.Read(b); return b }

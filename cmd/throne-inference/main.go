@@ -24,7 +24,11 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ok")) })
 	mux.HandleFunc("/v1/infer", func(w http.ResponseWriter, r *http.Request) {
-		payload, _ := io.ReadAll(r.Body)
+		payload, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		finding, err := svc.Infer(r.Context(), domain.InferRequest{CaptureID: r.URL.Query().Get("capture_id")}, payload)
 		if err != nil {
 			http.Error(w, err.Error(), 422)

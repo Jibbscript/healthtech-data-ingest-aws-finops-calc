@@ -2,13 +2,6 @@ locals {
   alarm_actions = var.alert_sns_topic_arn == null ? [] : [var.alert_sns_topic_arn]
 }
 
-resource "aws_cloudwatch_log_group" "service" {
-  for_each          = var.log_group_names
-  name              = each.value
-  retention_in_days = 30
-  tags              = var.tags
-}
-
 resource "aws_cloudwatch_metric_alarm" "dlq_depth" {
   alarm_name          = "${var.name_prefix}-dlq-depth"
   comparison_operator = "GreaterThanThreshold"

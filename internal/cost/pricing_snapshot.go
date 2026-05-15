@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/jibbscript/throne-backend-poc/internal/domain"
@@ -147,13 +146,5 @@ func ComputeMonthlyCost(in ModelInputs) ModelBreakdown {
 	b := ModelBreakdown{Compute: captures * computePerCapture, Storage: gbMonth * storageRate, Requests: captures * 0.000011, Observability: float64(in.DAU) * 0.02}
 	b.Total = b.Compute + b.Storage + b.Requests + b.Observability
 	b.PerUser = b.Total / float64(in.DAU)
-	return b
-}
-
-func ParseBool(v string, def bool) bool {
-	if v == "" {
-		return def
-	}
-	b, _ := strconv.ParseBool(v)
 	return b
 }

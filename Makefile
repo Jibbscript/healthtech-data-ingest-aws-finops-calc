@@ -20,9 +20,11 @@ test: ## Run Go tests.
 	$(GO) test $(PKGS)
 
 lint: ## Run lightweight local lint checks.
-	$(GO)fmt -w $$(find . -path './web/cost/node_modules' -prune -o -path './.git' -prune -o -name '*.go' -print)
+	@files="$$(find . -path './web/cost/node_modules' -prune -o -path './.git' -prune -o -name '*.go' -print)"; \
+	unformatted="$$(gofmt -l $$files)"; \
+	if [ -n "$$unformatted" ]; then printf '%s\n' "$$unformatted"; exit 1; fi
 	$(GO) test $(PKGS)
-	@if command -v terraform >/dev/null 2>&1 && [ -d infra ]; then terraform fmt -recursive -check infra || terraform fmt -recursive infra; fi
+	@if command -v terraform >/dev/null 2>&1 && [ -d infra ]; then terraform fmt -recursive -check infra; fi
 
 proto: ## Regenerate committed proto stubs and OpenAPI snapshot.
 	$(GO) run ./scripts/genproto

@@ -3,7 +3,6 @@ package inference
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"math"
 	"strings"
@@ -44,5 +43,3 @@ func (s *Service) Infer(ctx context.Context, req domain.InferRequest, payload []
 	}
 	return domain.Finding{ID: domain.NewID("finding"), CaptureID: req.CaptureID, Result: label, Confidence: math.Round(confidence*1000) / 1000, Reason: "deterministic synthetic finding from payload hash", CreatedAt: time.Now().UTC()}, nil
 }
-
-func HashHex(payload []byte) string { sum := sha256.Sum256(payload); return hex.EncodeToString(sum[:]) }

@@ -1,0 +1,16 @@
+.git
+.github
+.data
+.cache
+**/.terraform
+*.tfstate
+*.tfstate.*
+node_modules
+web/cost/node_modules
+web/cost/dist
+web/cost/coverage
+dist
+coverage
+*.test
+*.tsbuildinfo
+docs/one-pager.pdf

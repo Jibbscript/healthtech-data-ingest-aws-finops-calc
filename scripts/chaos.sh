@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cmd="${1:-help}"; arg="${2:-}"
+data_dir="${THRONE_DATA_DIR:-.data}"
 case "$cmd" in
   kill-processor|--kill)
     pkill -f throne-processor || true
@@ -9,8 +10,8 @@ case "$cmd" in
   saturate-queue|--saturate)
     n="${arg:-1000}"
     for i in $(seq 1 "$n"); do
-      mkdir -p .data/sqs/throne-ingest-jobs/pending
-      printf '{"id":"chaos-%s","job":{"capture_id":"chaos-%s","device_id":"device_demo","user_id":"user_demo","s3_key":"missing","captured_at":"%s"}}\n' "$i" "$i" "$(date -u +%FT%TZ)" > ".data/sqs/throne-ingest-jobs/pending/chaos-$i.json"
+      mkdir -p "$data_dir/sqs/throne-ingest-jobs/pending"
+      printf '{"id":"chaos-%s","job":{"capture_id":"chaos-%s","device_id":"device_demo","user_id":"user_demo","s3_key":"missing","captured_at":"%s"}}\n' "$i" "$i" "$(date -u +%FT%TZ)" > "$data_dir/sqs/throne-ingest-jobs/pending/chaos-$i.json"
     done
     echo "queued $n synthetic messages"
     ;;

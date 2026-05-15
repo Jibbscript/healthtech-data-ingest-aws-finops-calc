@@ -8,10 +8,6 @@ variable "alb_arn_suffix" {
   type    = string
   default = null
 }
-variable "log_group_names" {
-  type    = map(string)
-  default = {}
-}
 variable "alert_sns_topic_arn" {
   type    = string
   default = null

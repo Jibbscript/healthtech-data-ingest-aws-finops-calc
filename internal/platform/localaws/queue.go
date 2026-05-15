@@ -88,23 +88,3 @@ func (q *Queue) Receive(ctx context.Context, limit int) ([]QueuedMessage, error)
 func (q *Queue) Ack(_ context.Context, id string) error {
 	return os.Remove(filepath.Join(q.dir, "pending", id+".json"))
 }
-
-func (q *Queue) MoveToDLQ(_ context.Context, id string) error {
-	if err := os.MkdirAll(filepath.Join(q.dir, "dlq"), 0o755); err != nil {
-		return err
-	}
-	src := filepath.Join(q.dir, "pending", id+".json")
-	dst := filepath.Join(q.dir, "dlq", id+".json")
-	if err := os.Rename(src, dst); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (q *Queue) Depth() int {
-	entries, err := os.ReadDir(filepath.Join(q.dir, "pending"))
-	if err != nil {
-		return 0
-	}
-	return len(entries)
-}

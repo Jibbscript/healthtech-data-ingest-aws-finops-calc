@@ -81,7 +81,10 @@ func (p *Processor) Process(ctx context.Context, msg localaws.QueuedMessage) err
 	if err := p.Store.UpdateCaptureStatus(capture.ID, domain.CaptureSucceeded, ""); err != nil {
 		return err
 	}
-	b, _ := json.MarshalIndent(finding, "", "  ")
+	b, err := json.MarshalIndent(finding, "", "  ")
+	if err != nil {
+		return err
+	}
 	if _, err := p.Derived.Put(ctx, "findings/"+capture.ID+".json", b); err != nil {
 		return err
 	}

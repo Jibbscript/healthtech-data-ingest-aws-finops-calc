@@ -35,4 +35,15 @@ func main() {
 	}
 }
 
-func envLatency() time.Duration { return time.Second }
+func envLatency() time.Duration {
+	raw := os.Getenv("INFERENCE_LATENCY_MS")
+	if raw == "" {
+		return time.Second
+	}
+	latency, err := time.ParseDuration(raw + "ms")
+	if err != nil {
+		log.Printf("invalid INFERENCE_LATENCY_MS=%q; using 1s", raw)
+		return time.Second
+	}
+	return latency
+}

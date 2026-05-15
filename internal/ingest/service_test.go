@@ -33,9 +33,3 @@ func TestCaptureWritesBlobAndQueue(t *testing.T) {
 		t.Fatalf("unexpected queue messages: %+v", msgs)
 	}
 }
-
-func TestValidateChunkRejectsOversized(t *testing.T) {
-	if err := ValidateChunk(make([]byte, MaxChunkSize+1)); err == nil {
-		t.Fatal("expected oversized chunk error")
-	}
-}

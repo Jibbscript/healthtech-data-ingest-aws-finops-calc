@@ -43,14 +43,6 @@ func (s *Store) SeedDemo() error {
 	})
 }
 
-func (s *Store) UpsertUser(u domain.User) error {
-	return s.update(func(ss *snapshot) error { ss.Users[u.ID] = u; return nil })
-}
-
-func (s *Store) UpsertDevice(d domain.Device) error {
-	return s.update(func(ss *snapshot) error { ss.Devices[d.ID] = d; return nil })
-}
-
 func (s *Store) DeviceAllowed(deviceID, thumbprint string) bool {
 	ss, err := s.load()
 	if err != nil {

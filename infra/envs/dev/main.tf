@@ -125,7 +125,6 @@ module "observability" {
   dlq_name                 = module.ingest_queue.dlq_name
   rds_instance_id          = module.database.db_instance_id
   alb_arn_suffix           = null
-  log_group_names          = { for name, svc in module.service : name => svc.log_group_name }
   alert_sns_topic_arn      = null
   postgres_max_connections = 100
   tags                     = local.tags

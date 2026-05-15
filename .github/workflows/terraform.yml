@@ -7,7 +7,7 @@ on:
       - 'grafana/provisioning/**'
       - '.github/workflows/terraform.yml'
   push:
-    branches: [main]
+    branches: [masta]
     paths:
       - 'infra/**'
       - 'grafana/provisioning/**'

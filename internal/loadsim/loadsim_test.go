@@ -1,11 +1,43 @@
 package loadsim
 
-import "testing"
+import (
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
+	"testing"
+	"time"
+)
 
-func TestPayloadDistributionIsPositive(t *testing.T) {
-	for i := int64(0); i < 100; i++ {
-		if PayloadSize(i, 5*1024*1024) <= 0 {
-			t.Fatal("non-positive size")
+func TestRunSendsConfiguredPayloads(t *testing.T) {
+	var requests atomic.Int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/v1/captures" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
+		if r.Header.Get("x-device-thumbprint") != "DEV-THUMBPRINT" {
+			t.Error("missing device thumbprint")
+		}
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read body: %v", err)
+		}
+		if len(body) != 32 {
+			t.Errorf("payload bytes = %d", len(body))
+		}
+		requests.Add(1)
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer server.Close()
+
+	result := Run(Config{Devices: 1, RatePerDevice: 20, Duration: 120 * time.Millisecond, Target: server.URL, PayloadBytes: 32})
+	if result.Sent == 0 {
+		t.Fatal("expected at least one sent request")
+	}
+	if result.Failed != 0 {
+		t.Fatalf("failed requests = %d", result.Failed)
+	}
+	if requests.Load() != int64(result.Sent) {
+		t.Fatalf("requests=%d sent=%d", requests.Load(), result.Sent)
 	}
 }

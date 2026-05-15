@@ -4,7 +4,7 @@ interface PerUserDisplayProps {
   value: number;
 }
 
-export function perUserBand(value: number) {
+function perUserBand(value: number) {
   if (value <= 6) return 'green';
   if (value <= 8) return 'amber';
   return 'red';

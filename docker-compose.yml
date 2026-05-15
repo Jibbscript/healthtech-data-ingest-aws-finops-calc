@@ -37,6 +37,7 @@ services:
       - "9090:9090"
     volumes:
       - ./grafana/provisioning/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/modules/observability/alerts/prometheus-alerts.yaml:/etc/prometheus/rules/prometheus-alerts.yaml:ro
 
   grafana:
     image: grafana/grafana:11.3.0
@@ -47,7 +48,6 @@ services:
       - "3001:3000"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./infra/modules/observability/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
 
@@ -68,7 +68,6 @@ services:
       THRONE_DATA_DIR: /data
     ports:
       - "8080:8080"
-      - "8443:8443"
     volumes:
       - app-data:/data
     depends_on:

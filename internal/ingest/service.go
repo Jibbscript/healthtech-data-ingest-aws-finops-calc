@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	MaxChunkSize      = 1 << 20
 	DefaultMaxPayload = 20 << 20
 	DefaultRawBucket  = "throne-raw-local"
 )
@@ -96,13 +95,6 @@ func (s *Service) maxPayload() int {
 		return DefaultMaxPayload
 	}
 	return s.MaxPayload
-}
-
-func ValidateChunk(chunk []byte) error {
-	if len(chunk) > MaxChunkSize {
-		return fmt.Errorf("chunk exceeds max %d bytes", MaxChunkSize)
-	}
-	return nil
 }
 
 func captureKey(deviceID string, capturedAt time.Time, captureID string) string {

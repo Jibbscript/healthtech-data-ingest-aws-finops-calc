@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { DEFAULT_PRICING, type Pricing } from '../model/cost-model';
 import { loadPricing } from './pricing';
 
-export interface PricingState {
+interface PricingState {
   pricing: Pricing;
   loading: boolean;
   warning: string | null;
