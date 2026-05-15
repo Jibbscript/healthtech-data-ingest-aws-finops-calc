@@ -33,3 +33,23 @@ func TestCaptureWritesBlobAndQueue(t *testing.T) {
 		t.Fatalf("unexpected queue messages: %+v", msgs)
 	}
 }
+
+func TestCaptureRequiresMatchingDeviceCertificateAndOwner(t *testing.T) {
+	dir := t.TempDir()
+	st := store.New(dir)
+	if err := st.SeedDemo(); err != nil {
+		t.Fatal(err)
+	}
+	svc := New(st, localaws.NewBlobStore(dir, DefaultRawBucket), localaws.NewQueue(dir, "jobs"), nil)
+
+	for name, req := range map[string]CaptureRequest{
+		"missing thumbprint": {CaptureID: "cap-no-thumb", UserID: "user_demo", DeviceID: "device_demo", Data: []byte("payload")},
+		"wrong owner":        {CaptureID: "cap-wrong-owner", UserID: "other_user", DeviceID: "device_demo", Thumbprint: "DEV-THUMBPRINT", Data: []byte("payload")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := svc.Capture(context.Background(), req); err == nil {
+				t.Fatal("expected device authorization failure")
+			}
+		})
+	}
+}

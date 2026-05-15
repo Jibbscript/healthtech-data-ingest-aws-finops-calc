@@ -1,13 +1,14 @@
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { CostBreakdown } from './components/CostBreakdown';
 import { ExportButton } from './components/ExportButton';
 import { InputPanel } from './components/InputPanel';
 import { PerUserDisplay } from './components/PerUserDisplay';
-import { ProjectionChart } from './components/ProjectionChart';
 import { ScenarioToggles } from './components/ScenarioToggles';
 import { currency } from './format';
 import { DEFAULT_INPUTS, DEFAULT_SCENARIO, computeMonthlyCost, computeScenarioDeltas, type CostInputs, type ScenarioOptions } from './model/cost-model';
 import { usePricing } from './pricing/usePricing';
+
+const ProjectionChart = lazy(() => import('./components/ProjectionChart').then((module) => ({ default: module.ProjectionChart })));
 
 export function App() {
   const [inputs, setInputs] = useState<CostInputs>(DEFAULT_INPUTS);
@@ -50,7 +51,9 @@ export function App() {
           />
         </div>
         <CostBreakdown breakdown={breakdown} />
-        <ProjectionChart breakdown={breakdown} />
+        <Suspense fallback={null}>
+          <ProjectionChart breakdown={breakdown} />
+        </Suspense>
       </div>
     </main>
   );

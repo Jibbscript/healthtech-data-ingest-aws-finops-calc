@@ -40,6 +40,13 @@ resource "aws_iam_role" "task" {
   tags               = var.tags
 }
 
+resource "aws_iam_role_policy" "task" {
+  count  = var.task_policy_json == null ? 0 : 1
+  name   = "${var.name}-task-access"
+  role   = aws_iam_role.task.id
+  policy = var.task_policy_json
+}
+
 resource "aws_ecs_task_definition" "this" {
   family                   = var.name
   requires_compatibilities = ["FARGATE"]

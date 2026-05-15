@@ -1,8 +1,5 @@
 variable "name" { type = string }
-variable "project" { type = string }
-variable "env" { type = string }
 variable "cluster_name" { type = string }
-variable "vpc_id" { type = string }
 variable "subnet_ids" { type = list(string) }
 variable "security_group_ids" { type = list(string) }
 variable "image" { type = string }
@@ -28,6 +25,10 @@ variable "environment" {
 variable "secrets" {
   type    = map(string)
   default = {}
+}
+variable "task_policy_json" {
+  type    = string
+  default = null
 }
 variable "target_group_arn" {
   type    = string

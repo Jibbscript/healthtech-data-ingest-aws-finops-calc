@@ -14,3 +14,6 @@ plugins:
       - paths=source_relative
   - local: protoc-gen-openapiv2
     out: api/openapi
+    opt:
+      - allow_merge=true
+      - merge_file_name=throne.v1

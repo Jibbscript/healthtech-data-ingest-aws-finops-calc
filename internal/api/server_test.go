@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -30,10 +31,42 @@ func TestJWTAndCaptureAuthorization(t *testing.T) {
 	if rr.Code != http.StatusOK || !bytes.Contains(rr.Body.Bytes(), []byte("cap-api")) {
 		t.Fatalf("code=%d body=%s", rr.Code, rr.Body.String())
 	}
+	req = httptest.NewRequest(http.MethodPost, "/v1/captures/cap-api/image-url", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rr = httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK || !bytes.Contains(rr.Body.Bytes(), []byte("local-s3://download")) {
+		t.Fatalf("image-url code=%d body=%s", rr.Code, rr.Body.String())
+	}
 	req = httptest.NewRequest(http.MethodGet, "/v1/captures/cap-api", nil)
 	rr = httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusUnauthorized {
 		t.Fatalf("want 401, got %d", rr.Code)
+	}
+}
+
+func TestVerifyRejectsMissingExpiration(t *testing.T) {
+	header, _ := json.Marshal(map[string]string{"alg": "HS256", "typ": "JWT"})
+	payload, _ := json.Marshal(Claims{UserID: "user_demo"})
+	unsigned := b64(header) + "." + b64(payload)
+	token := unsigned + "." + b64(mac("s", unsigned))
+
+	if _, err := VerifyHS256("s", token); err == nil {
+		t.Fatal("expected missing exp to be rejected")
+	}
+}
+
+func TestMissingServerSecretDoesNotAcceptTokens(t *testing.T) {
+	token, _ := SignHS256("s", Claims{UserID: "user_demo"})
+	h := (&Server{Store: store.New(t.TempDir()), Raw: localaws.NewBlobStore(t.TempDir(), ingest.DefaultRawBucket)}).Handler()
+	req := httptest.NewRequest(http.MethodGet, "/v1/captures/cap-api", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rr := httptest.NewRecorder()
+
+	h.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("want 500 for missing server secret, got %d", rr.Code)
 	}
 }

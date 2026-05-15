@@ -1,6 +1,3 @@
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-
 interface ExportButtonProps {
   targetId: string;
 }
@@ -10,6 +7,7 @@ export function ExportButton({ targetId }: ExportButtonProps) {
     const target = document.getElementById(targetId);
     if (!target) return;
 
+    const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
     const canvas = await html2canvas(target, { scale: 2, backgroundColor: '#f8fafc' });
     const image = canvas.toDataURL('image/png');
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });

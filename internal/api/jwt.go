@@ -38,9 +38,26 @@ func SignHS256(secret string, claims Claims) (string, error) {
 }
 
 func VerifyHS256(secret, token string) (Claims, error) {
+	if secret == "" {
+		return Claims{}, errors.New("jwt secret is not configured")
+	}
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
 		return Claims{}, errors.New("invalid token")
+	}
+	header, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		return Claims{}, err
+	}
+	var h struct {
+		Alg string `json:"alg"`
+		Typ string `json:"typ"`
+	}
+	if err := json.Unmarshal(header, &h); err != nil {
+		return Claims{}, err
+	}
+	if h.Alg != "HS256" || h.Typ != "JWT" {
+		return Claims{}, errors.New("invalid token header")
 	}
 	unsigned := parts[0] + "." + parts[1]
 	expected := b64(mac(secret, unsigned))
@@ -55,7 +72,10 @@ func VerifyHS256(secret, token string) (Claims, error) {
 	if err := json.Unmarshal(payload, &claims); err != nil {
 		return Claims{}, err
 	}
-	if claims.Exp > 0 && time.Now().Unix() > claims.Exp {
+	if claims.Exp == 0 {
+		return Claims{}, errors.New("missing exp")
+	}
+	if time.Now().Unix() > claims.Exp {
 		return Claims{}, errors.New("token expired")
 	}
 	if claims.UserID == "" {
@@ -75,6 +95,10 @@ func UserID(ctx context.Context) string { v, _ := ctx.Value(userIDKey).(string);
 
 func AuthMiddleware(secret string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if secret == "" {
+			http.Error(w, "server auth not configured", http.StatusInternalServerError)
+			return
+		}
 		h := r.Header.Get("Authorization")
 		if !strings.HasPrefix(h, "Bearer ") {
 			http.Error(w, "missing bearer token", http.StatusUnauthorized)

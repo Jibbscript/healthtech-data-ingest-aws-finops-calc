@@ -45,6 +45,14 @@ type Finding struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+type AuditEvent struct {
+	ID         string    `json:"id"`
+	Actor      string    `json:"actor"`
+	Action     string    `json:"action"`
+	Resource   string    `json:"resource"`
+	OccurredAt time.Time `json:"occurred_at"`
+}
+
 type IngestJob struct {
 	CaptureID   string    `json:"capture_id"`
 	DeviceID    string    `json:"device_id"`

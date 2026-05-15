@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jibbscript/throne-backend-poc/internal/domain"
@@ -41,6 +42,12 @@ type Service struct {
 	Queue      *localaws.Queue
 	MaxPayload int
 	Logger     *slog.Logger
+	metrics    ingestMetrics
+}
+
+type ingestMetrics struct {
+	mu       sync.Mutex
+	requests map[string]int64
 }
 
 func New(st *store.Store, blob *localaws.BlobStore, q *localaws.Queue, logger *slog.Logger) *Service {
@@ -60,7 +67,7 @@ func (s *Service) Capture(ctx context.Context, req CaptureRequest) (CaptureAck, 
 	if len(req.Data) > s.maxPayload() {
 		return CaptureAck{}, fmt.Errorf("payload exceeds max %d bytes", s.maxPayload())
 	}
-	if !s.Store.DeviceAllowed(req.DeviceID, req.Thumbprint) {
+	if !s.Store.DeviceAllowedForUser(req.UserID, req.DeviceID, req.Thumbprint) {
 		return CaptureAck{}, errors.New("device certificate is not allowlisted")
 	}
 	if req.CaptureID == "" {
@@ -86,8 +93,33 @@ func (s *Service) Capture(ctx context.Context, req CaptureRequest) (CaptureAck, 
 			return CaptureAck{}, err
 		}
 	}
+	if err := s.Store.AddAuditEvent(domain.AuditEvent{Actor: capture.UserID, Action: "capture.accepted", Resource: capture.ID}); err != nil {
+		return CaptureAck{}, err
+	}
 	s.Logger.Info("capture accepted", "capture_id", capture.ID, "device_id", capture.DeviceID, "bytes", capture.SizeBytes)
 	return CaptureAck{Capture: capture, S3Key: capture.S3Key, ContentHash: capture.ContentHash}, nil
+}
+
+func (s *Service) RecordRequest(code string) {
+	if code == "" {
+		code = "error"
+	}
+	s.metrics.mu.Lock()
+	defer s.metrics.mu.Unlock()
+	if s.metrics.requests == nil {
+		s.metrics.requests = map[string]int64{}
+	}
+	s.metrics.requests[code]++
+}
+
+func (s *Service) MetricsSnapshot() map[string]int64 {
+	s.metrics.mu.Lock()
+	defer s.metrics.mu.Unlock()
+	out := map[string]int64{}
+	for code, count := range s.metrics.requests {
+		out[code] = count
+	}
+	return out
 }
 
 func (s *Service) maxPayload() int {

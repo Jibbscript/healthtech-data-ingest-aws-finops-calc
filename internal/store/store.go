@@ -21,10 +21,11 @@ type Store struct {
 }
 
 type snapshot struct {
-	Users    map[string]domain.User    `json:"users"`
-	Devices  map[string]domain.Device  `json:"devices"`
-	Captures map[string]domain.Capture `json:"captures"`
-	Findings map[string]domain.Finding `json:"findings"`
+	Users       map[string]domain.User       `json:"users"`
+	Devices     map[string]domain.Device     `json:"devices"`
+	Captures    map[string]domain.Capture    `json:"captures"`
+	Findings    map[string]domain.Finding    `json:"findings"`
+	AuditEvents map[string]domain.AuditEvent `json:"audit_events"`
 }
 
 func New(dataDir string) *Store {
@@ -43,7 +44,7 @@ func (s *Store) SeedDemo() error {
 	})
 }
 
-func (s *Store) DeviceAllowed(deviceID, thumbprint string) bool {
+func (s *Store) DeviceAllowedForUser(userID, deviceID, thumbprint string) bool {
 	ss, err := s.load()
 	if err != nil {
 		return false
@@ -52,7 +53,7 @@ func (s *Store) DeviceAllowed(deviceID, thumbprint string) bool {
 	if !ok {
 		return false
 	}
-	return thumbprint == "" || d.CertificateThumbprint == thumbprint
+	return userID != "" && d.UserID == userID && thumbprint != "" && d.CertificateThumbprint == thumbprint
 }
 
 func (s *Store) AddCapture(c domain.Capture) (domain.Capture, bool, error) {
@@ -165,6 +166,19 @@ func (s *Store) GetFinding(id string) (domain.Finding, error) {
 	return f, nil
 }
 
+func (s *Store) AddAuditEvent(e domain.AuditEvent) error {
+	return s.update(func(ss *snapshot) error {
+		if e.ID == "" {
+			e.ID = domain.NewID("audit")
+		}
+		if e.OccurredAt.IsZero() {
+			e.OccurredAt = time.Now().UTC()
+		}
+		ss.AuditEvents[e.ID] = e
+		return nil
+	})
+}
+
 func (s *Store) FindFindingByCapture(captureID string) (domain.Finding, error) {
 	ss, err := s.load()
 	if err != nil {
@@ -194,7 +208,7 @@ func (s *Store) update(fn func(*snapshot) error) error {
 func (s *Store) load() (snapshot, error) { s.mu.Lock(); defer s.mu.Unlock(); return s.loadUnlocked() }
 
 func (s *Store) loadUnlocked() (snapshot, error) {
-	ss := snapshot{Users: map[string]domain.User{}, Devices: map[string]domain.Device{}, Captures: map[string]domain.Capture{}, Findings: map[string]domain.Finding{}}
+	ss := snapshot{Users: map[string]domain.User{}, Devices: map[string]domain.Device{}, Captures: map[string]domain.Capture{}, Findings: map[string]domain.Finding{}, AuditEvents: map[string]domain.AuditEvent{}}
 	b, err := os.ReadFile(s.path)
 	if errors.Is(err, os.ErrNotExist) {
 		return ss, nil
@@ -219,6 +233,9 @@ func (s *Store) loadUnlocked() (snapshot, error) {
 	}
 	if ss.Findings == nil {
 		ss.Findings = map[string]domain.Finding{}
+	}
+	if ss.AuditEvents == nil {
+		ss.AuditEvents = map[string]domain.AuditEvent{}
 	}
 	return ss, nil
 }

@@ -1,15 +1,20 @@
 package api
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/jibbscript/throne-backend-poc/internal/domain"
+	thronev1 "github.com/jibbscript/throne-backend-poc/internal/gen/throne/v1"
 	"github.com/jibbscript/throne-backend-poc/internal/platform/localaws"
 	"github.com/jibbscript/throne-backend-poc/internal/store"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Server struct {
@@ -18,126 +23,136 @@ type Server struct {
 	Secret string
 }
 
+type GRPCServer struct {
+	thronev1.UnimplementedThroneAPIServer
+	Server *Server
+}
+
+func (s *Server) RegisterGRPC(reg grpc.ServiceRegistrar) {
+	thronev1.RegisterThroneAPIServer(reg, &GRPCServer{Server: s})
+}
+
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
-	protected := http.NewServeMux()
-	protected.HandleFunc("/v1/users/", s.listCaptures)
-	protected.HandleFunc("/v1/captures/", s.captureRoutes)
-	protected.HandleFunc("/v1/findings/", s.getFinding)
-	mux.Handle("/v1/", AuthMiddleware(s.secret(), protected))
+
+	gateway := runtime.NewServeMux()
+	if err := thronev1.RegisterThroneAPIHandlerServer(context.Background(), gateway, &GRPCServer{Server: s}); err != nil {
+		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			http.Error(w, "gateway registration failed", http.StatusInternalServerError)
+		})
+	}
+	mux.Handle("/v1/", AuthMiddleware(s.Secret, gateway))
 	return mux
 }
 
-func (s *Server) listCaptures(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
+func (g *GRPCServer) ListCaptures(ctx context.Context, req *thronev1.ListCapturesRequest) (*thronev1.ListCapturesResponse, error) {
+	if err := g.requireUser(ctx, req.GetUserId()); err != nil {
+		return nil, err
 	}
-	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(parts) != 4 || parts[0] != "v1" || parts[1] != "users" || parts[3] != "captures" {
-		http.NotFound(w, r)
-		return
+	if err := g.audit(ctx, "api.list_captures", req.GetUserId()); err != nil {
+		return nil, err
 	}
-	userID := parts[2]
-	if UserID(r.Context()) != userID {
-		http.Error(w, "forbidden", http.StatusForbidden)
-		return
-	}
-	limit, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
-	items, next, err := s.Store.ListCapturesByUser(userID, limit, r.URL.Query().Get("cursor"))
+	items, next, err := g.Server.Store.ListCapturesByUser(req.GetUserId(), int(req.GetPageSize()), req.GetCursor())
 	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+		return nil, status.Error(codes.Internal, "internal error")
 	}
-	writeJSON(w, map[string]any{"captures": items, "next_cursor": next})
+	out := make([]*thronev1.Capture, 0, len(items))
+	for _, item := range items {
+		out = append(out, captureToProto(item))
+	}
+	return &thronev1.ListCapturesResponse{Captures: out, NextCursor: next}, nil
 }
 
-func (s *Server) captureRoutes(w http.ResponseWriter, r *http.Request) {
-	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(parts) < 3 {
-		http.NotFound(w, r)
-		return
-	}
-	id := parts[2]
-	if len(parts) == 3 && r.Method == http.MethodGet {
-		s.getCapture(w, r, id)
-		return
-	}
-	if len(parts) == 4 && parts[3] == "image-url" && r.Method == http.MethodPost {
-		s.imageURL(w, r, id)
-		return
-	}
-	http.NotFound(w, r)
-}
-
-func (s *Server) getCapture(w http.ResponseWriter, r *http.Request, id string) {
-	c, err := s.Store.GetCapture(id)
+func (g *GRPCServer) GetCapture(ctx context.Context, req *thronev1.GetCaptureRequest) (*thronev1.GetCaptureResponse, error) {
+	capture, err := g.Server.Store.GetCapture(req.GetCaptureId())
 	if errors.Is(err, store.ErrNotFound) {
-		http.NotFound(w, r)
-		return
-	} else if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+		return nil, status.Error(codes.NotFound, "capture not found")
 	}
-	if c.UserID != UserID(r.Context()) {
-		http.Error(w, "forbidden", http.StatusForbidden)
-		return
+	if err != nil {
+		return nil, status.Error(codes.Internal, "internal error")
 	}
-	writeJSON(w, map[string]any{"capture": c})
+	if err := g.requireUser(ctx, capture.UserID); err != nil {
+		return nil, err
+	}
+	if err := g.audit(ctx, "api.get_capture", req.GetCaptureId()); err != nil {
+		return nil, err
+	}
+	return &thronev1.GetCaptureResponse{Capture: captureToProto(capture)}, nil
 }
 
-func (s *Server) imageURL(w http.ResponseWriter, r *http.Request, id string) {
-	c, err := s.Store.GetCapture(id)
+func (g *GRPCServer) GetFinding(ctx context.Context, req *thronev1.GetFindingRequest) (*thronev1.GetFindingResponse, error) {
+	finding, err := g.Server.Store.GetFinding(req.GetFindingId())
 	if errors.Is(err, store.ErrNotFound) {
-		http.NotFound(w, r)
-		return
-	} else if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+		return nil, status.Error(codes.NotFound, "finding not found")
 	}
-	if c.UserID != UserID(r.Context()) {
-		http.Error(w, "forbidden", http.StatusForbidden)
-		return
+	if err != nil {
+		return nil, status.Error(codes.Internal, "internal error")
 	}
-	writeJSON(w, map[string]any{"url": s.Raw.Presign(c.S3Key, 5*time.Minute), "expires_in_seconds": 300})
+	if err := g.requireUser(ctx, finding.UserID); err != nil {
+		return nil, err
+	}
+	if err := g.audit(ctx, "api.get_finding", req.GetFindingId()); err != nil {
+		return nil, err
+	}
+	return &thronev1.GetFindingResponse{Finding: findingToProto(finding)}, nil
 }
 
-func (s *Server) getFinding(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(parts) != 3 {
-		http.NotFound(w, r)
-		return
-	}
-	f, err := s.Store.GetFinding(parts[2])
+func (g *GRPCServer) CreateImageURL(ctx context.Context, req *thronev1.CreateImageURLRequest) (*thronev1.CreateImageURLResponse, error) {
+	capture, err := g.Server.Store.GetCapture(req.GetCaptureId())
 	if errors.Is(err, store.ErrNotFound) {
-		http.NotFound(w, r)
-		return
-	} else if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+		return nil, status.Error(codes.NotFound, "capture not found")
 	}
-	if f.UserID != UserID(r.Context()) {
-		http.Error(w, "forbidden", http.StatusForbidden)
-		return
+	if err != nil {
+		return nil, status.Error(codes.Internal, "internal error")
 	}
-	writeJSON(w, map[string]any{"finding": f})
+	if err := g.requireUser(ctx, capture.UserID); err != nil {
+		return nil, err
+	}
+	if err := g.audit(ctx, "api.create_image_url", req.GetCaptureId()); err != nil {
+		return nil, err
+	}
+	return &thronev1.CreateImageURLResponse{Url: g.Server.Raw.Presign(capture.S3Key, 5*time.Minute), ExpiresInSeconds: 300}, nil
 }
 
-func (s *Server) secret() string {
-	if s.Secret == "" {
-		return "dev-secret"
+func (g *GRPCServer) requireUser(ctx context.Context, expected string) error {
+	if UserID(ctx) != expected {
+		return status.Error(codes.PermissionDenied, "forbidden")
 	}
-	return s.Secret
+	return nil
 }
-func writeJSON(w http.ResponseWriter, v any) {
-	w.Header().Set("content-type", "application/json")
-	_ = json.NewEncoder(w).Encode(v)
+
+func (g *GRPCServer) audit(ctx context.Context, action string, resource string) error {
+	if err := g.Server.Store.AddAuditEvent(domain.AuditEvent{Actor: UserID(ctx), Action: action, Resource: resource}); err != nil {
+		return status.Error(codes.Internal, "internal error")
+	}
+	return nil
+}
+
+func captureToProto(c domain.Capture) *thronev1.Capture {
+	return &thronev1.Capture{
+		Id:          c.ID,
+		UserId:      c.UserID,
+		DeviceId:    c.DeviceID,
+		S3Key:       c.S3Key,
+		ContentHash: c.ContentHash,
+		SizeBytes:   c.SizeBytes,
+		Status:      string(c.Status),
+		CapturedAt:  timestamppb.New(c.CapturedAt),
+	}
+}
+
+func findingToProto(f domain.Finding) *thronev1.Finding {
+	return &thronev1.Finding{
+		Id:         f.ID,
+		CaptureId:  f.CaptureID,
+		UserId:     f.UserID,
+		Result:     f.Result,
+		Confidence: f.Confidence,
+		Reason:     f.Reason,
+		CreatedAt:  timestamppb.New(f.CreatedAt),
+	}
 }

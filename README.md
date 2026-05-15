@@ -33,14 +33,14 @@ Then open:
 
 - No real PHI or biological image classifier is included.
 - Local mode uses file-backed S3/SQS/Postgres-shaped adapters so reviewers can run the pipeline without cloud credentials.
-- The gRPC/protobuf surface is present and generated into deterministic PoC stubs; local demo endpoints are HTTP for clone-and-run speed.
+- The protobuf surface is canonical: `make proto` runs `buf generate` for Go, gRPC, grpc-gateway, and OpenAPI artifacts. Local demo HTTP endpoints remain for clone-and-run compatibility.
 - Pricing API endpoints use a bundled May 2026 snapshot when live AWS Pricing credentials are unavailable.
 
 ## Commands
 
 ```bash
 make help          # list targets
-make proto         # regenerate committed proto/OpenAPI stubs
+make proto         # regenerate committed Go/gRPC/gateway/OpenAPI artifacts
 make test          # Go unit/integration-shaped tests
 make build         # all Go commands
 make lint          # gofmt + tests + terraform fmt when available

@@ -41,6 +41,7 @@ func Run(cfg Config) Result {
 	if cfg.PayloadBytes <= 0 {
 		cfg.PayloadBytes = 1024
 	}
+	client := &http.Client{Timeout: 30 * time.Second}
 	deadline := time.Now().Add(cfg.Duration)
 	var mu sync.Mutex
 	result := Result{}
@@ -58,7 +59,7 @@ func Run(cfg Config) Result {
 				payload := RandomPayload(cfg.PayloadBytes)
 				req, _ := http.NewRequest(http.MethodPost, cfg.Target+"/v1/captures?user_id=user_demo&device_id=device_demo", bytes.NewReader(payload))
 				req.Header.Set("x-device-thumbprint", "DEV-THUMBPRINT")
-				resp, err := http.DefaultClient.Do(req)
+				resp, err := client.Do(req)
 				elapsed := time.Since(start)
 				mu.Lock()
 				success := err == nil && resp.StatusCode < 300

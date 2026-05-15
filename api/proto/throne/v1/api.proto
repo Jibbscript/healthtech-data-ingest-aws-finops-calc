@@ -18,7 +18,7 @@ service ThroneAPI {
     option (google.api.http) = { get: "/v1/findings/{finding_id}" };
   }
   rpc CreateImageURL(CreateImageURLRequest) returns (CreateImageURLResponse) {
-    option (google.api.http) = { post: "/v1/captures/{capture_id}/image-url" body: "*" };
+    option (google.api.http) = { post: "/v1/captures/{capture_id}/image-url" };
   }
 }
 

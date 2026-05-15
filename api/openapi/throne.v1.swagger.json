@@ -1,29 +1,341 @@
 {
+  "swagger": "2.0",
   "info": {
-    "title": "Throne API",
-    "version": "v1"
+    "title": "throne/v1/types.proto",
+    "version": "version not set"
   },
+  "tags": [
+    {
+      "name": "ThroneAPI"
+    },
+    {
+      "name": "IngestService"
+    },
+    {
+      "name": "InferenceService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
   "paths": {
-    "/v1/captures/{capture_id}": {
+    "/v1/captures/{captureId}": {
       "get": {
-        "summary": "Get capture"
+        "operationId": "ThroneAPI_GetCapture",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCaptureResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "captureId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ThroneAPI"
+        ]
       }
     },
-    "/v1/captures/{capture_id}/image-url": {
+    "/v1/captures/{captureId}/image-url": {
       "post": {
-        "summary": "Create signed image URL"
+        "operationId": "ThroneAPI_CreateImageURL",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateImageURLResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "captureId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ThroneAPI"
+        ]
       }
     },
-    "/v1/findings/{finding_id}": {
+    "/v1/findings/{findingId}": {
       "get": {
-        "summary": "Get finding"
+        "operationId": "ThroneAPI_GetFinding",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetFindingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "findingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ThroneAPI"
+        ]
       }
     },
-    "/v1/users/{user_id}/captures": {
+    "/v1/users/{userId}/captures": {
       "get": {
-        "summary": "List captures"
+        "operationId": "ThroneAPI_ListCaptures",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCapturesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ThroneAPI"
+        ]
       }
     }
   },
-  "swagger": "2.0"
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "thronev1Capture": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "deviceId": {
+          "type": "string"
+        },
+        "s3Key": {
+          "type": "string"
+        },
+        "contentHash": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "status": {
+          "type": "string"
+        },
+        "capturedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1CaptureAck": {
+      "type": "object",
+      "properties": {
+        "captureId": {
+          "type": "string"
+        },
+        "s3Key": {
+          "type": "string"
+        },
+        "contentHash": {
+          "type": "string"
+        },
+        "capture": {
+          "$ref": "#/definitions/thronev1Capture"
+        }
+      }
+    },
+    "v1CaptureMetadata": {
+      "type": "object",
+      "properties": {
+        "captureUuid": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "deviceId": {
+          "type": "string"
+        },
+        "capturedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "contentType": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateImageURLResponse": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "expiresInSeconds": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1Finding": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "captureId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "result": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "format": "double"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1GetCaptureResponse": {
+      "type": "object",
+      "properties": {
+        "capture": {
+          "$ref": "#/definitions/thronev1Capture"
+        }
+      }
+    },
+    "v1GetFindingResponse": {
+      "type": "object",
+      "properties": {
+        "finding": {
+          "$ref": "#/definitions/v1Finding"
+        }
+      }
+    },
+    "v1InferResponse": {
+      "type": "object",
+      "properties": {
+        "finding": {
+          "$ref": "#/definitions/v1Finding"
+        },
+        "confidence": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "v1ListCapturesResponse": {
+      "type": "object",
+      "properties": {
+        "captures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/thronev1Capture"
+          }
+        },
+        "nextCursor": {
+          "type": "string"
+        }
+      }
+    }
+  }
 }
