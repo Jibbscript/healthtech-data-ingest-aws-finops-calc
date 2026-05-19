@@ -42,10 +42,10 @@ load: ## Run the configurable load generator; pass flags after --.
 	THRONE_DATA_DIR=$(DATA_DIR) $(GO) run ./cmd/throne-load --target http://localhost:8080 $(filter-out $@,$(MAKECMDGOALS))
 
 run-ingest: ## Run the ingest HTTP/gRPC-shaped service.
-	THRONE_DATA_DIR=$(DATA_DIR) $(GO) run ./cmd/throne-ingest
+	THRONE_SEED_DEMO_DATA=true THRONE_DATA_DIR=$(DATA_DIR) $(GO) run ./cmd/throne-ingest
 
 run-api: ## Run the mobile-facing API service.
-	THRONE_ALLOW_DEV_AUTH=true THRONE_DATA_DIR=$(DATA_DIR) $(GO) run ./cmd/throne-api
+	THRONE_ALLOW_DEV_AUTH=true THRONE_SEED_DEMO_DATA=true THRONE_DATA_DIR=$(DATA_DIR) $(GO) run ./cmd/throne-api
 
 run-processor: ## Run one processor drain loop.
 	THRONE_DATA_DIR=$(DATA_DIR) $(GO) run ./cmd/throne-processor --once

@@ -63,7 +63,11 @@ func (p *Processor) Process(ctx context.Context, msg localaws.QueuedMessage) err
 	finding, err := p.Infer.Infer(callCtx, domain.InferRequest{CaptureID: msg.Job.CaptureID, S3Key: msg.Job.S3Key, ModelVersion: p.Infer.ModelVersion, ContentHash: msg.Job.ContentHash}, payload)
 	if err != nil {
 		if errors.Is(err, inference.ErrPermanent) {
-			failed := domain.Finding{ID: domain.NewID("finding"), CaptureID: capture.ID, UserID: capture.UserID, Result: "failed", Confidence: 0, Reason: err.Error(), CreatedAt: time.Now().UTC()}
+			id, idErr := domain.NewID("finding")
+			if idErr != nil {
+				return idErr
+			}
+			failed := domain.Finding{ID: id, CaptureID: capture.ID, UserID: capture.UserID, Result: "failed", Confidence: 0, Reason: err.Error(), CreatedAt: time.Now().UTC()}
 			if addErr := p.Store.AddFinding(failed); addErr != nil {
 				return addErr
 			}

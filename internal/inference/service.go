@@ -41,5 +41,9 @@ func (s *Service) Infer(ctx context.Context, req domain.InferRequest, payload []
 	if sum[1]%5 == 0 {
 		label = "review"
 	}
-	return domain.Finding{ID: domain.NewID("finding"), CaptureID: req.CaptureID, Result: label, Confidence: math.Round(confidence*1000) / 1000, Reason: "deterministic synthetic finding from payload hash", CreatedAt: time.Now().UTC()}, nil
+	id, err := domain.NewID("finding")
+	if err != nil {
+		return domain.Finding{}, err
+	}
+	return domain.Finding{ID: id, CaptureID: req.CaptureID, Result: label, Confidence: math.Round(confidence*1000) / 1000, Reason: "deterministic synthetic finding from payload hash", CreatedAt: time.Now().UTC()}, nil
 }

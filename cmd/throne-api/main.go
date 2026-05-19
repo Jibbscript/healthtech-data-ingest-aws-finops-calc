@@ -28,7 +28,11 @@ func main() {
 		secret = "dev-secret"
 	}
 	st := store.New(dataDir)
-	_ = st.SeedDemo()
+	if seedDemoData() {
+		if err := st.SeedDemo(); err != nil {
+			log.Fatalf("seed local demo data: %v", err)
+		}
+	}
 	srv := &api.Server{Store: st, Raw: localaws.NewBlobStore(dataDir, ingest.DefaultRawBucket), Secret: secret}
 	go serveGRPC(srv)
 	log.Println("throne-api REST gateway listening on :3000")
@@ -36,7 +40,15 @@ func main() {
 }
 
 func allowDevAuth() bool {
-	switch strings.ToLower(os.Getenv("THRONE_ALLOW_DEV_AUTH")) {
+	return envEnabled("THRONE_ALLOW_DEV_AUTH")
+}
+
+func seedDemoData() bool {
+	return envEnabled("THRONE_SEED_DEMO_DATA")
+}
+
+func envEnabled(name string) bool {
+	switch strings.ToLower(os.Getenv(name)) {
 	case "1", "true", "yes":
 		return true
 	default:

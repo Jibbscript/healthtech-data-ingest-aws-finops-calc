@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/jibbscript/throne-backend-poc/internal/ingest"
 	"github.com/jibbscript/throne-backend-poc/internal/platform/localaws"
@@ -19,11 +20,24 @@ func main() {
 		dataDir = ".data"
 	}
 	st := store.New(dataDir)
-	_ = st.SeedDemo()
+	if seedDemoData() {
+		if err := st.SeedDemo(); err != nil {
+			log.Fatalf("seed local demo data: %v", err)
+		}
+	}
 	svc := ingest.New(st, localaws.NewBlobStore(dataDir, ingest.DefaultRawBucket), localaws.NewQueue(dataDir, "throne-ingest-jobs"), slog.Default())
 	go serveGRPC(svc)
 	log.Println("throne-ingest HTTP compatibility endpoint listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", svc.Handler()))
+}
+
+func seedDemoData() bool {
+	switch strings.ToLower(os.Getenv("THRONE_SEED_DEMO_DATA")) {
+	case "1", "true", "yes":
+		return true
+	default:
+		return false
+	}
 }
 
 func serveGRPC(svc *ingest.Service) {

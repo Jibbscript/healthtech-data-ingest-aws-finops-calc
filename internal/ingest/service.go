@@ -71,7 +71,11 @@ func (s *Service) Capture(ctx context.Context, req CaptureRequest) (CaptureAck, 
 		return CaptureAck{}, errors.New("device certificate is not allowlisted")
 	}
 	if req.CaptureID == "" {
-		req.CaptureID = domain.NewID("capture")
+		id, err := domain.NewID("capture")
+		if err != nil {
+			return CaptureAck{}, err
+		}
+		req.CaptureID = id
 	}
 	if req.CapturedAt.IsZero() {
 		req.CapturedAt = time.Now().UTC()

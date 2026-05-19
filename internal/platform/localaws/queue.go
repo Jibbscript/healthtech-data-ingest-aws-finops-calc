@@ -41,7 +41,10 @@ func (q *Queue) Send(ctx context.Context, job domain.IngestJob, attrs map[string
 	if err := os.MkdirAll(filepath.Join(q.dir, "pending"), 0o755); err != nil {
 		return "", err
 	}
-	id := domain.NewID("msg")
+	id, err := domain.NewID("msg")
+	if err != nil {
+		return "", err
+	}
 	msg := QueuedMessage{ID: id, Job: job, Attributes: attrs, CreatedAt: time.Now().UTC()}
 	b, err := json.MarshalIndent(msg, "", "  ")
 	if err != nil {

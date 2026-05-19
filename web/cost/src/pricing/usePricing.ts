@@ -19,10 +19,7 @@ export function usePricing(): PricingState {
         setState({
           pricing: result.pricing,
           loading: false,
-          warning:
-            result.source === 'fallback'
-              ? `Using bundled pricing snapshot because ${result.errors.length} pricing endpoint(s) failed.`
-              : null,
+          warning: pricingWarning(result.source, result.errors.length),
         });
       })
       .catch((error: unknown) => {
@@ -42,4 +39,12 @@ export function usePricing(): PricingState {
   }, []);
 
   return state;
+}
+
+function pricingWarning(source: 'api' | 'partial' | 'fallback', errorCount: number): string | null {
+  if (source === 'api') return null;
+  if (source === 'partial') {
+    return `Using bundled pricing defaults for ${errorCount} pricing endpoint(s); live pricing loaded for the remaining services.`;
+  }
+  return `Using bundled pricing snapshot because ${errorCount} pricing endpoint(s) failed.`;
 }

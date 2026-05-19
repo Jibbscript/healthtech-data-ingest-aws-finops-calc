@@ -19,7 +19,7 @@ describe('loadPricing', () => {
     expect(result.pricing.dataTransfer.internetEgressPerGb).toBe(0.1);
   });
 
-  it('keeps fallback defaults for failed endpoints', async () => {
+  it('labels partial live pricing when only some endpoints fail', async () => {
     const fetcher = vi.fn(async (endpoint: string) => {
       if (endpoint.includes('/sqs')) {
         return { ok: false, status: 503, json: async () => ({}) } as Response;
@@ -29,10 +29,20 @@ describe('loadPricing', () => {
 
     const result = await loadPricing(fetcher as unknown as typeof fetch);
 
-    expect(result.source).toBe('fallback');
+    expect(result.source).toBe('partial');
     expect(result.errors).toHaveLength(1);
     expect(result.pricing.sqs.requestPerMillion).toBe(DEFAULT_PRICING.sqs.requestPerMillion);
     expect(result.pricing.fargate.vcpuHour).toBe(0.05);
+  });
+
+  it('uses fallback only when every pricing endpoint fails', async () => {
+    const fetcher = vi.fn(async () => ({ ok: false, status: 503, json: async () => ({}) })) as unknown as typeof fetch;
+
+    const result = await loadPricing(fetcher);
+
+    expect(result.source).toBe('fallback');
+    expect(result.errors).toHaveLength(7);
+    expect(result.pricing).toEqual(DEFAULT_PRICING);
   });
 
   it('ignores internal-shaped fields in API responses', async () => {
