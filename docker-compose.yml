@@ -63,9 +63,12 @@ services:
   throne-ingest:
     build:
       context: .
-      dockerfile: cmd/throne-ingest/Dockerfile
+      dockerfile: docker/service.Dockerfile
+      args:
+        SERVICE: throne-ingest
     environment:
       THRONE_DATA_DIR: /data
+      THRONE_SEED_DEMO_DATA: "true"
     ports:
       - "8080:8080"
     volumes:

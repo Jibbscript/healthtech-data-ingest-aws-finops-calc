@@ -33,7 +33,10 @@ func DefaultSnapshot() map[string]domain.Pricing {
 
 func (s *Service) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ok")) })
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
 	mux.HandleFunc("/v1/pricing/fargate", func(w http.ResponseWriter, r *http.Request) { s.write(w, s.Snapshot["fargate:"+region(r)]) })
 	mux.HandleFunc("/v1/pricing/s3", func(w http.ResponseWriter, r *http.Request) {
 		class := r.URL.Query().Get("class")
@@ -70,7 +73,7 @@ func region(r *http.Request) string {
 func (s *Service) write(w http.ResponseWriter, p domain.Pricing) {
 	w.Header().Set("content-type", "application/json")
 	if p.Currency == "" {
-		http.Error(w, "pricing not found", 404)
+		http.Error(w, "pricing not found", http.StatusNotFound)
 		return
 	}
 	_ = json.NewEncoder(w).Encode(p)
@@ -80,7 +83,7 @@ func cors(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
 		w.Header().Set("Access-Control-Allow-Headers", "content-type,authorization")
 		if r.Method == http.MethodOptions {
-			w.WriteHeader(204)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		next.ServeHTTP(w, r)

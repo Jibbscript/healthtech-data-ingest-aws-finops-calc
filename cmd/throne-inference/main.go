@@ -26,7 +26,10 @@ func main() {
 	svc := inference.New(latency)
 	metrics := &inferenceMetrics{}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ok")) })
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
 	mux.HandleFunc("/v1/infer", func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		defer func() { metrics.observe(time.Since(start)) }()
@@ -38,7 +41,7 @@ func main() {
 		}
 		finding, err := svc.Infer(r.Context(), domain.InferRequest{CaptureID: r.URL.Query().Get("capture_id")}, payload)
 		if err != nil {
-			http.Error(w, err.Error(), 422)
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
 		_ = json.NewEncoder(w).Encode(finding)

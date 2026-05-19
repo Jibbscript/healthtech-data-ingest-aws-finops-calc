@@ -16,7 +16,9 @@ import (
 func TestJWTAndCaptureAuthorization(t *testing.T) {
 	dir := t.TempDir()
 	st := store.New(dir)
-	_ = st.SeedDemo()
+	if err := st.SeedDemo(); err != nil {
+		t.Fatal(err)
+	}
 	raw := localaws.NewBlobStore(dir, ingest.DefaultRawBucket)
 	_, err := ingest.New(st, raw, localaws.NewQueue(dir, "jobs"), nil).Capture(context.Background(), ingest.CaptureRequest{CaptureID: "cap-api", UserID: "user_demo", DeviceID: "device_demo", Thumbprint: "DEV-THUMBPRINT", Data: []byte("payload")})
 	if err != nil {

@@ -144,7 +144,11 @@ func (s *Store) ListCapturesByUser(userID string, limit int, cursor string) ([]d
 func (s *Store) AddFinding(f domain.Finding) error {
 	return s.update(func(ss *snapshot) error {
 		if f.ID == "" {
-			f.ID = domain.NewID("finding")
+			id, err := domain.NewID("finding")
+			if err != nil {
+				return err
+			}
+			f.ID = id
 		}
 		if f.CreatedAt.IsZero() {
 			f.CreatedAt = time.Now().UTC()
@@ -169,7 +173,11 @@ func (s *Store) GetFinding(id string) (domain.Finding, error) {
 func (s *Store) AddAuditEvent(e domain.AuditEvent) error {
 	return s.update(func(ss *snapshot) error {
 		if e.ID == "" {
-			e.ID = domain.NewID("audit")
+			id, err := domain.NewID("audit")
+			if err != nil {
+				return err
+			}
+			e.ID = id
 		}
 		if e.OccurredAt.IsZero() {
 			e.OccurredAt = time.Now().UTC()
@@ -177,19 +185,6 @@ func (s *Store) AddAuditEvent(e domain.AuditEvent) error {
 		ss.AuditEvents[e.ID] = e
 		return nil
 	})
-}
-
-func (s *Store) FindFindingByCapture(captureID string) (domain.Finding, error) {
-	ss, err := s.load()
-	if err != nil {
-		return domain.Finding{}, err
-	}
-	for _, f := range ss.Findings {
-		if f.CaptureID == captureID {
-			return f, nil
-		}
-	}
-	return domain.Finding{}, ErrNotFound
 }
 
 func (s *Store) update(fn func(*snapshot) error) error {

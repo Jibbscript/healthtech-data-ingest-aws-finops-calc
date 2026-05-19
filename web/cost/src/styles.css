@@ -15,6 +15,9 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .hero p { margin: 0; max-width: 760px; color: #475569; }
 .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800; font-size: 0.78rem; color: #334155; }
 .primary { border: 0; border-radius: 999px; padding: 12px 18px; background: #0f172a; color: white; cursor: pointer; }
+.primary:disabled { cursor: wait; opacity: 0.65; }
+.export-control { display: grid; justify-items: end; gap: 8px; }
+.export-error { max-width: 280px; margin: 0; color: #991b1b; font-size: 0.9rem; text-align: right; }
 .notice { padding: 12px 16px; border-radius: 12px; background: #dbeafe; margin-bottom: 16px; }
 .warning { background: #fef3c7; color: #713f12; }
 .dashboard { display: grid; grid-template-columns: minmax(320px, 430px) 1fr; gap: 20px; align-items: start; }
@@ -33,6 +36,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .per-user-amber { border-left-color: #d97706; background: #fffbeb; }
 .per-user-red { border-left-color: #dc2626; background: #fef2f2; }
 .total-cost { font-size: 2.5rem; font-weight: 800; margin: 0 0 8px; }
+.chart-placeholder { min-height: 280px; display: grid; align-content: center; color: #64748b; }
 .toggles { display: grid; gap: 12px; margin-bottom: 16px; }
 .delta-grid, .summary-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0; }
 .summary-list { grid-template-columns: repeat(2, 1fr); }
@@ -44,6 +48,8 @@ dd { margin: 4px 0 0; font-weight: 800; }
   .app-shell { padding: 18px; }
   .hero, .dashboard { display: block; }
   .hero .primary { margin-top: 16px; }
+  .export-control { justify-items: start; margin-top: 16px; }
+  .export-error { text-align: left; }
   .card, .per-user { margin-bottom: 18px; }
   .input-grid { grid-template-columns: 1fr; }
 }

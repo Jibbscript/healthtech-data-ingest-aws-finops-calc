@@ -3,6 +3,8 @@ package loadsim
 import (
 	"bytes"
 	"crypto/rand"
+	"fmt"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -15,6 +17,7 @@ type Config struct {
 	Target        string
 	PayloadBytes  int
 	OnResult      func(success bool, latency time.Duration)
+	RandomReader  io.Reader
 }
 
 type Result struct {
@@ -23,7 +26,20 @@ type Result struct {
 	Latencies []time.Duration
 }
 
-func RandomPayload(n int) []byte { b := make([]byte, n); _, _ = rand.Read(b); return b }
+func RandomPayload(n int) ([]byte, error) {
+	return randomPayload(n, rand.Reader)
+}
+
+func randomPayload(n int, reader io.Reader) ([]byte, error) {
+	if reader == nil {
+		reader = rand.Reader
+	}
+	b := make([]byte, n)
+	if _, err := io.ReadFull(reader, b); err != nil {
+		return nil, fmt.Errorf("generate random payload: %w", err)
+	}
+	return b, nil
+}
 
 func Run(cfg Config) Result {
 	if cfg.Devices <= 0 {
@@ -43,8 +59,25 @@ func Run(cfg Config) Result {
 	}
 	client := &http.Client{Timeout: 30 * time.Second}
 	deadline := time.Now().Add(cfg.Duration)
+	randomReader := cfg.RandomReader
+	if randomReader == nil {
+		randomReader = rand.Reader
+	}
 	var mu sync.Mutex
 	result := Result{}
+	record := func(success bool, latency time.Duration) {
+		mu.Lock()
+		if !success {
+			result.Failed++
+		} else {
+			result.Sent++
+		}
+		result.Latencies = append(result.Latencies, latency)
+		mu.Unlock()
+		if cfg.OnResult != nil {
+			cfg.OnResult(success, latency)
+		}
+	}
 	var wg sync.WaitGroup
 	for d := 0; d < cfg.Devices; d++ {
 		wg.Add(1)
@@ -56,23 +89,21 @@ func Run(cfg Config) Result {
 			for time.Now().Before(deadline) {
 				<-ticker.C
 				start := time.Now()
-				payload := RandomPayload(cfg.PayloadBytes)
-				req, _ := http.NewRequest(http.MethodPost, cfg.Target+"/v1/captures?user_id=user_demo&device_id=device_demo", bytes.NewReader(payload))
+				payload, err := randomPayload(cfg.PayloadBytes, randomReader)
+				if err != nil {
+					record(false, time.Since(start))
+					continue
+				}
+				req, err := http.NewRequest(http.MethodPost, cfg.Target+"/v1/captures?user_id=user_demo&device_id=device_demo", bytes.NewReader(payload))
+				if err != nil {
+					record(false, time.Since(start))
+					continue
+				}
 				req.Header.Set("x-device-thumbprint", "DEV-THUMBPRINT")
 				resp, err := client.Do(req)
 				elapsed := time.Since(start)
-				mu.Lock()
 				success := err == nil && resp.StatusCode < 300
-				if !success {
-					result.Failed++
-				} else {
-					result.Sent++
-				}
-				result.Latencies = append(result.Latencies, elapsed)
-				mu.Unlock()
-				if cfg.OnResult != nil {
-					cfg.OnResult(success, elapsed)
-				}
+				record(success, elapsed)
 				if resp != nil {
 					_ = resp.Body.Close()
 				}

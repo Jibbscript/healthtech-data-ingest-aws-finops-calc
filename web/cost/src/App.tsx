@@ -51,10 +51,19 @@ export function App() {
           />
         </div>
         <CostBreakdown breakdown={breakdown} />
-        <Suspense fallback={null}>
+        <Suspense fallback={<ChartPlaceholder />}>
           <ProjectionChart breakdown={breakdown} />
         </Suspense>
       </div>
     </main>
+  );
+}
+
+function ChartPlaceholder() {
+  return (
+    <section className="card chart-placeholder" aria-busy="true" aria-label="Loading projection chart">
+      <h2>Storage projection</h2>
+      <p>Loading chart...</p>
+    </section>
   );
 }

@@ -84,7 +84,7 @@ This is intentional — phases must not be entangled, because the atomic-decompo
 - `internal/ingest/queue.go` — SQS publisher wrapper
 - `internal/ingest/auth.go` — mTLS cert validation, device_id extraction
 - `internal/ingest/middleware/` — OTel tracing, structured logging, request metrics
-- `cmd/throne-ingest/Dockerfile` — multi-stage, distroless final image
+- `docker/service.Dockerfile` — shared multi-stage, distroless final image builder for Go services
 - REST gateway endpoint via `grpc-gateway` (separate listener on port 8080)
 - Unit tests for handler logic, idempotency, error paths
 - Integration test: docker-compose-up, send capture via grpcurl, assert S3 object + SQS message

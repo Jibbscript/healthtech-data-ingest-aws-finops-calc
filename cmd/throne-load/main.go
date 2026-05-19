@@ -14,6 +14,7 @@ import (
 func main() {
 	var cfg loadsim.Config
 	var dur string
+	var metricsAddr string
 	var capturesPerDevicePerDay float64
 	var sent, failed atomic.Int64
 	var totalLatencyMillis atomic.Int64
@@ -24,6 +25,7 @@ func main() {
 	flag.StringVar(&dur, "duration", "10s", "duration")
 	flag.StringVar(&cfg.Target, "target", "http://localhost:8080", "ingest target")
 	flag.IntVar(&cfg.PayloadBytes, "payload-bytes", 1024, "payload size in bytes")
+	flag.StringVar(&metricsAddr, "metrics-addr", ":9091", "address for Prometheus load metrics")
 	flag.Parse()
 
 	parsedDuration, err := time.ParseDuration(dur)
@@ -43,7 +45,7 @@ func main() {
 		totalLatencyMillis.Add(latency.Milliseconds())
 	}
 
-	metricsSrv := &http.Server{Addr: ":9090", Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	metricsSrv := &http.Server{Addr: metricsAddr, Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		s := sent.Load()
 		f := failed.Load()
 		avg := int64(0)
@@ -52,7 +54,11 @@ func main() {
 		}
 		_, _ = fmt.Fprintf(w, "# HELP throne_load_captures_sent_total Synthetic captures sent successfully\n# TYPE throne_load_captures_sent_total counter\nthrone_load_captures_sent_total %d\n# HELP throne_load_captures_failed_total Synthetic captures that failed\n# TYPE throne_load_captures_failed_total counter\nthrone_load_captures_failed_total %d\n# HELP throne_load_average_latency_ms Average synthetic upload latency\n# TYPE throne_load_average_latency_ms gauge\nthrone_load_average_latency_ms %d\n", s, f, avg)
 	})}
-	go func() { _ = metricsSrv.ListenAndServe() }()
+	go func() {
+		if err := metricsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("load metrics server stopped: %v", err)
+		}
+	}()
 
 	result := loadsim.Run(cfg)
 	_ = metricsSrv.Close()

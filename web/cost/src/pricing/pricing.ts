@@ -2,7 +2,7 @@ import { DEFAULT_PRICING, type Pricing, type RdsInstanceClass } from '../model/c
 
 export interface PricingLoadResult {
   pricing: Pricing;
-  source: 'api' | 'fallback';
+  source: 'api' | 'partial' | 'fallback';
   errors: string[];
 }
 
@@ -12,9 +12,6 @@ type PricingSlice = Partial<{
   sqs: Partial<Pricing['sqs']>;
   rds: Partial<Record<RdsInstanceClass, number>>;
   dataTransfer: Partial<Pricing['dataTransfer']>;
-  observability: Partial<Pricing['observability']>;
-  compressionRatio: number;
-  fixedMonthly: number;
 }>;
 
 const API_BASE = import.meta.env.VITE_PRICING_API_BASE ?? 'http://localhost:9000';
@@ -52,9 +49,15 @@ export async function loadPricing(fetcher: typeof fetch = fetch): Promise<Pricin
 
   return {
     pricing: mergePricing(slices),
-    source: errors.length > 0 ? 'fallback' : 'api',
+    source: pricingSource(slices, errors),
     errors,
   };
+}
+
+function pricingSource(slices: PricingSlice[], errors: string[]): PricingLoadResult['source'] {
+  if (errors.length === 0) return 'api';
+  if (slices.length > 0) return 'partial';
+  return 'fallback';
 }
 
 function normalizeApiResponse(raw: unknown): PricingSlice {
@@ -89,9 +92,6 @@ function mergePricing(slices: PricingSlice[]): Pricing {
       sqs: { ...pricing.sqs, ...slice.sqs },
       rds: { ...pricing.rds, ...slice.rds },
       dataTransfer: { ...pricing.dataTransfer, ...slice.dataTransfer },
-      observability: { ...pricing.observability, ...slice.observability },
-      compressionRatio: slice.compressionRatio ?? pricing.compressionRatio,
-      fixedMonthly: slice.fixedMonthly ?? pricing.fixedMonthly,
     }),
     DEFAULT_PRICING,
   );

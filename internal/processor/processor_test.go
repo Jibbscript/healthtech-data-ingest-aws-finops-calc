@@ -24,7 +24,8 @@ func TestDrainCreatesFindingAndDerivedArtifact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p := New(st, raw, localaws.NewBlobStore(dir, "throne-derived-local"), q, inference.New(0), nil)
+	derived := localaws.NewBlobStore(dir, "throne-derived-local")
+	p := New(st, raw, derived, q, inference.New(0), nil)
 	processed, err := p.Drain(context.Background(), 10)
 	if err != nil {
 		t.Fatal(err)
@@ -36,7 +37,7 @@ func TestDrainCreatesFindingAndDerivedArtifact(t *testing.T) {
 	if capture.Status != "succeeded" {
 		t.Fatalf("capture not succeeded: %+v", capture)
 	}
-	if _, err := st.FindFindingByCapture("cap1"); err != nil {
+	if _, err := derived.Get(context.Background(), "findings/cap1.json"); err != nil {
 		t.Fatal(err)
 	}
 }
