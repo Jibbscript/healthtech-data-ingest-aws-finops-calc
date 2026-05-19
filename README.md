@@ -45,6 +45,7 @@ make test          # Go unit/integration-shaped tests
 make build         # all Go commands
 make lint          # gofmt + tests + terraform fmt when available
 make docker-config # validate docker-compose syntax
+docker build -f docker/service.Dockerfile --build-arg SERVICE=throne-ingest .
 ```
 
 ## Onboarding contract answers (arc42 §8.4)

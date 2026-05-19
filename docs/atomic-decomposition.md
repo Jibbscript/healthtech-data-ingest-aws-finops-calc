@@ -184,7 +184,7 @@ estimates are 50%-confidence — multiply by ~1.4 for 80% confidence per standar
 - DoD: `curl -X POST localhost:8080/v1/captures` with multipart body returns 200 + capture_id
 
 ### 3.8 — Dockerfile + image push [25m] [→3.7]
-- multi-stage build: golang:1.22 → distroless/static
+- shared multi-stage build via `docker/service.Dockerfile`: golang:1.23 → distroless/static
 - non-root user, healthcheck binary baked in
 - pushed to ECR or local registry
 - DoD: image is <30 MB; `docker run` boots in <2s
