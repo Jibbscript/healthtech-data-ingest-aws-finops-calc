@@ -1,6 +1,6 @@
 # Throne Ingest PoC + FinOps Calculator
 
-A production-shaped backend interview artifact for a healthtech ingest pipeline: device captures arrive through an ingest service, are queued, processed through a deterministic inference stub, persisted, exposed through a read API, and tied to a live cost calculator.
+A production-shaped Proof-of-Concept for a healthtech ingest pipeline: device captures arrive through an ingest service, are queued, processed through a deterministic inference stub, persisted, exposed through a read API, and tied to a live cost calculator.
 
 ## 30-second elevator
 
