@@ -1,18 +1,18 @@
 import { currency } from '../format';
-import type { CostBreakdown, ScenarioOptions } from '../model/cost-model';
+import type { ScenarioOptions } from '../model/cost-model';
 
 interface ScenarioTogglesProps {
   scenario: ScenarioOptions;
   onChange: (scenario: ScenarioOptions) => void;
-  base: CostBreakdown;
-  withoutTiering: CostBreakdown;
-  withoutSpot: CostBreakdown;
-  withoutCompression: CostBreakdown;
+  base: number;
+  withoutTiering: number;
+  withoutSpot: number;
+  withoutCompression: number;
 }
 
 export function ScenarioToggles({ scenario, onChange, base, withoutTiering, withoutSpot, withoutCompression }: ScenarioTogglesProps) {
   const set = (key: keyof ScenarioOptions) => onChange({ ...scenario, [key]: !scenario[key] });
-  const delta = (other: CostBreakdown) => other.monthlyCost - base.monthlyCost;
+  const delta = (other: number) => other - base;
 
   return (
     <section className="card" aria-labelledby="scenario-heading">
