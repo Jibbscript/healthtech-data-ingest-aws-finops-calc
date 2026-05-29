@@ -30,8 +30,12 @@ jobs:
         with:
           go-version: '1.23'
           cache: true
-      - uses: bufbuild/buf-setup-action@v1
-      # genproto (make proto) shells out to these protoc plugins; buf-setup
+      # buf-setup-action has no Node 24 release; buf-action (setup_only) is its
+      # node24 successor and installs only the buf CLI, like-for-like.
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+      # genproto (make proto) shells out to these protoc plugins; buf-action
       # only provides buf itself, so install them and put them on PATH.
       - name: Install protoc plugins
         run: |
