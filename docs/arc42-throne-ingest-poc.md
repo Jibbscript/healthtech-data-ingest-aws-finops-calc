@@ -427,7 +427,7 @@ Root modules per env compose modules. Backend state in S3 with DynamoDB locking,
 
 - Lint, vet, test, race detector on every PR.
 - Container build + push to ECR on merge to main.
-- Terraform plan on PR (`tflint`, `Trivy`, `terraform plan`); comment plan output on PR.
+- Terraform checks on PR: `fmt -check`, `validate` (`-backend=false`), `tflint`, and a Trivy IaC misconfiguration scan. (`terraform plan` with plan-output PR comments is a future addition — the PoC runs no remote backend or cloud credentials.)
 - Terraform apply on merge to main with manual approval gate.
 - No blue-green at PoC scale; ECS rolling deploy is sufficient. Re-evaluate at 10 k DAU.
 
