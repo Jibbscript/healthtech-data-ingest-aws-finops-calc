@@ -94,7 +94,7 @@ data "aws_iam_policy_document" "app_task" {
     ]
   }
 
-  #tfsec:ignore:aws-iam-no-policy-wildcards S3 object ARNs require a wildcard for app-generated capture/finding keys; access is constrained to app-owned prefixes in named buckets.
+  # S3 object ARNs require a wildcard for app-generated capture/finding keys; access is constrained to app-owned prefixes in named buckets. (Trivy AVD-AWS-0345 does not flag this resource-scoped wildcard.)
   statement {
     actions = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
     resources = [

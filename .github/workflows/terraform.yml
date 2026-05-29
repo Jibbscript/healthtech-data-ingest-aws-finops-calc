@@ -37,8 +37,14 @@ jobs:
           cd ../..
           tflint --init --config "$PWD/.tflint.hcl"
           tflint --recursive --config "$PWD/.tflint.hcl"
-      - name: tfsec
-        uses: aquasecurity/tfsec-action@v1.0.3
+      # tfsec is EOL (folded into Trivy). exit-code: '1' keeps this a blocking
+      # gate (tfsec-action failed on findings; trivy-action defaults to 0).
+      - name: Trivy IaC misconfiguration scan
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
-          working_directory: infra
-          additional_args: --config-file infra/.tfsec.yml
+          scan-type: config
+          scan-ref: infra
+          trivyignores: infra/.trivyignore
+          severity: LOW,MEDIUM,HIGH,CRITICAL
+          exit-code: '1'
+          hide-progress: true
