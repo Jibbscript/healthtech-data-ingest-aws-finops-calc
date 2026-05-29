@@ -5,13 +5,12 @@ import (
 	"errors"
 	"io"
 
-	"github.com/jibbscript/throne-backend-poc/internal/domain"
 	thronev1 "github.com/jibbscript/throne-backend-poc/internal/gen/throne/v1"
+	"github.com/jibbscript/throne-backend-poc/internal/protomap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type GRPCServer struct {
@@ -36,15 +35,20 @@ func (s *GRPCServer) Capture(stream grpc.ClientStreamingServer[thronev1.CaptureC
 			}
 			ack, err := s.Service.Capture(stream.Context(), req)
 			if err != nil {
-				s.Service.RecordRequest("4xx")
-				return status.Error(codes.InvalidArgument, err.Error())
+				var ve ValidationError
+				if errors.As(err, &ve) {
+					s.Service.RecordRequest("4xx")
+					return status.Error(codes.InvalidArgument, err.Error())
+				}
+				s.Service.RecordRequest("5xx")
+				return status.Error(codes.Internal, "internal error")
 			}
 			s.Service.RecordRequest("2xx")
 			return stream.SendAndClose(&thronev1.CaptureAck{
 				CaptureId:   ack.Capture.ID,
 				S3Key:       ack.S3Key,
 				ContentHash: ack.ContentHash,
-				Capture:     captureToProto(ack.Capture),
+				Capture:     protomap.CaptureToProto(ack.Capture),
 			})
 		}
 		if err != nil {
@@ -75,23 +79,8 @@ func thumbprintFromContext(ctx context.Context) string {
 	if !ok {
 		return ""
 	}
-	for _, key := range []string{"x-device-thumbprint", "device-thumbprint"} {
-		if values := md.Get(key); len(values) > 0 {
-			return values[0]
-		}
+	if values := md.Get("x-device-thumbprint"); len(values) > 0 {
+		return values[0]
 	}
 	return ""
-}
-
-func captureToProto(c domain.Capture) *thronev1.Capture {
-	return &thronev1.Capture{
-		Id:          c.ID,
-		UserId:      c.UserID,
-		DeviceId:    c.DeviceID,
-		S3Key:       c.S3Key,
-		ContentHash: c.ContentHash,
-		SizeBytes:   c.SizeBytes,
-		Status:      string(c.Status),
-		CapturedAt:  timestamppb.New(c.CapturedAt),
-	}
 }

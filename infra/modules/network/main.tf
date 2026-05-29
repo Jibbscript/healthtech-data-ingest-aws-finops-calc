@@ -71,11 +71,7 @@ resource "aws_route_table" "private" {
 
 resource "aws_route_table" "data" {
   vpc_id = aws_vpc.this.id
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.this.id
-  }
-  tags = merge(var.tags, { Name = "${var.name_prefix}-data-rt" })
+  tags   = merge(var.tags, { Name = "${var.name_prefix}-data-rt" })
 }
 
 resource "aws_route_table_association" "public" {
@@ -94,38 +90,10 @@ resource "aws_route_table_association" "data" {
   route_table_id = aws_route_table.data.id
 }
 
-resource "aws_security_group" "alb" {
-  name        = "${var.name_prefix}-sg-alb"
-  description = "Public ALB ingress"
-  vpc_id      = aws_vpc.this.id
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTPS"
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "All egress"
-  }
-  tags = merge(var.tags, { Name = "${var.name_prefix}-sg-alb" })
-}
-
 resource "aws_security_group" "tasks" {
   name        = "${var.name_prefix}-sg-ingress-tasks"
-  description = "ECS task ingress from ALB and internal services"
+  description = "ECS task ingress from internal services"
   vpc_id      = aws_vpc.this.id
-  ingress {
-    from_port       = 0
-    to_port         = 65535
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-    description     = "ALB to tasks"
-  }
   ingress {
     from_port   = 0
     to_port     = 65535
@@ -143,26 +111,6 @@ resource "aws_security_group" "tasks" {
   tags = merge(var.tags, { Name = "${var.name_prefix}-sg-ingress-tasks" })
 }
 
-resource "aws_security_group" "data" {
-  name        = "${var.name_prefix}-sg-data"
-  description = "Data tier ingress from ECS tasks"
-  vpc_id      = aws_vpc.this.id
-  ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.tasks.id]
-    description     = "Postgres from tasks"
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "All egress"
-  }
-  tags = merge(var.tags, { Name = "${var.name_prefix}-sg-data" })
-}
 
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.this.id

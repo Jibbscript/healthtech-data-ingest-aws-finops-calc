@@ -30,14 +30,6 @@ variable "task_policy_json" {
   type    = string
   default = null
 }
-variable "target_group_arn" {
-  type    = string
-  default = null
-}
-variable "assign_public_ip" {
-  type    = bool
-  default = false
-}
 variable "tags" {
   type    = map(string)
   default = {}

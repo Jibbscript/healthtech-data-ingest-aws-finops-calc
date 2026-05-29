@@ -21,13 +21,8 @@ type Config struct {
 }
 
 type Result struct {
-	Sent      int
-	Failed    int
-	Latencies []time.Duration
-}
-
-func RandomPayload(n int) ([]byte, error) {
-	return randomPayload(n, rand.Reader)
+	Sent   int
+	Failed int
 }
 
 func randomPayload(n int, reader io.Reader) ([]byte, error) {
@@ -72,7 +67,6 @@ func Run(cfg Config) Result {
 		} else {
 			result.Sent++
 		}
-		result.Latencies = append(result.Latencies, latency)
 		mu.Unlock()
 		if cfg.OnResult != nil {
 			cfg.OnResult(success, latency)

@@ -61,14 +61,11 @@ export interface StorageBreakdown {
   standardGb: number;
   iaGb: number;
   glacierGb: number;
-  monthlyCost: number;
 }
 
 export interface MonthlyProjectionPoint extends CostCategoryBreakdown {
   month: number;
   total: number;
-  perUser: number;
-  storedGb: number;
 }
 
 export interface CostBreakdown {
@@ -77,8 +74,6 @@ export interface CostBreakdown {
   monthlyCost: number;
   perUserMonthlyCost: number;
   ingestGbPerDay: number;
-  effectivePayloadMb: number;
-  storage: StorageBreakdown;
   categories: CostCategoryBreakdown;
   projections: MonthlyProjectionPoint[];
 }
@@ -134,12 +129,12 @@ export const DEFAULT_PRICING: Pricing = {
 const DAYS_PER_MONTH = 30;
 const HOURS_PER_MONTH = 730;
 const BYTES_PER_GB_IN_MB = 1024;
+const SNAPSHOT_MONTHS = 24;
 
 export function computeMonthlyCost(
   inputs: CostInputs,
   pricing: Pricing,
   scenario: ScenarioOptions = DEFAULT_SCENARIO,
-  month = 24,
 ): CostBreakdown {
   const normalizedInputs = normalizeInputs(inputs);
   const effectiveScenario = {
@@ -147,19 +142,16 @@ export function computeMonthlyCost(
     spot: scenario.spot,
     compression: scenario.compression,
   };
-  const categories = computeCategories(normalizedInputs, pricing, effectiveScenario, month);
+  const categories = computeCategories(normalizedInputs, pricing, effectiveScenario, SNAPSHOT_MONTHS);
   const monthlyCost = sumCategories(categories);
   const ingestGbPerDay = dailyIngestGb(normalizedInputs, pricing, effectiveScenario);
-  const projections = Array.from({ length: 24 }, (_, index) => {
+  const projections = Array.from({ length: SNAPSHOT_MONTHS }, (_, index) => {
     const projectionMonth = index + 1;
     const projectionCategories = computeCategories(normalizedInputs, pricing, effectiveScenario, projectionMonth);
-    const total = sumCategories(projectionCategories);
     return {
       month: projectionMonth,
       ...projectionCategories,
-      total,
-      perUser: total / normalizedInputs.dau,
-      storedGb: ingestGbPerDay * DAYS_PER_MONTH * projectionMonth,
+      total: sumCategories(projectionCategories),
     };
   });
 
@@ -169,8 +161,6 @@ export function computeMonthlyCost(
     monthlyCost,
     perUserMonthlyCost: monthlyCost / normalizedInputs.dau,
     ingestGbPerDay,
-    effectivePayloadMb: effectivePayloadMb(normalizedInputs, pricing, effectiveScenario),
-    storage: computeStorage(ingestGbPerDay, pricing, effectiveScenario, month, normalizedInputs),
     categories,
     projections,
   };
@@ -211,7 +201,7 @@ function computeCategories(
   const spotMultiplier = scenario.spot ? 1 - inputs.spotDiscountPercent / 100 : 1;
   const processor = processorHours * (inputs.processorFargateVcpu * vcpuRate + processorMemoryGb * gbRate) * spotMultiplier;
 
-  const storage = computeStorage(dailyIngestGb(inputs, pricing, scenario), pricing, scenario, month, inputs);
+  const storage = computeStorage(dailyIngestGb(inputs, pricing, scenario), scenario, month, inputs);
   const dataTransferGb = capturesPerMonth * pricing.dataTransfer.egressGbPerCapture;
   const dataTransfer = dataTransferGb * pricing.dataTransfer.internetEgressPerGb;
   const rds = pricing.rds[inputs.rdsInstanceClass] * HOURS_PER_MONTH * (inputs.readReplica ? 2 : 1);
@@ -236,7 +226,6 @@ function computeCategories(
 
 function computeStorage(
   dailyGb: number,
-  pricing: Pricing,
   scenario: ScenarioOptions,
   month: number,
   inputs: CostInputs,
@@ -249,15 +238,7 @@ function computeStorage(
   const iaGb = dailyGb * tierDays.ia;
   const glacierGb = dailyGb * tierDays.glacier;
 
-  return {
-    standardGb,
-    iaGb,
-    glacierGb,
-    monthlyCost:
-      standardGb * pricing.s3.standardGbMonth +
-      iaGb * pricing.s3.standardIaGbMonth +
-      glacierGb * pricing.s3.glacierIrGbMonth,
-  };
+  return { standardGb, iaGb, glacierGb };
 }
 
 function splitTierDays(storedDays: number, standardCutover: number, glacierCutover: number) {

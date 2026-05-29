@@ -169,14 +169,15 @@ ML model runs as its own service behind gRPC. Processor calls inference via gRPC
 
 ### 4.6 Cost strategy (interleaved cost subsection)
 
-Four levers, in order of magnitude of impact:
+Five levers, in order of magnitude of impact:
 
 1. **S3 lifecycle policies.** Standard-IA at 30d cuts storage to ~$0.0125/GB-month; Glacier IR at 90d to ~$0.004. At 2 TB/day = 730 TB/year, the difference between "all Standard" and "tiered" is roughly $200 k/year of pure storage spend. Single largest lever.
 2. **Compression at ingest.** Raw bio-imagery is highly compressible (lossless 2–3×, perceptually lossless 5–10× depending on what the model needs). One decision at the ingest service, multiplies every downstream cost.
-3. **Right-sized Fargate tasks.** Default Fargate sizing is wasteful. Profile real CPU/memory under load, set requests at p95 + 20% headroom, autoscale on CPU+queue depth.
-4. **Spot-eligible workers.** Fargate Spot for the processor pool — up to 70% discount, interruption tolerated because SQS redelivers. Inference stays on-demand (latency-sensitive).
+3. **ARM/Graviton across the fleet.** ~20% off all Fargate compute on equivalent workloads. Inference, processor, ingest, and API all run on ARM with a single Go recompile. Called out explicitly in the v0.2 cost revision (was implicit before).
+4. **Right-sized Fargate tasks.** Default Fargate sizing is wasteful. Profile real CPU/memory under load, set requests at p95 + 20% headroom, autoscale on CPU+queue depth.
+5. **Spot-eligible workers.** Fargate Spot for the processor pool — up to 70% discount, interruption tolerated because SQS redelivers. Inference stays on-demand (latency-sensitive).
 
-These four together are what makes $6/user/month achievable; without them you are at $15–25 trivially. The cost calculator (PoC #1) lets you plug in real numbers and see exactly where each lever bites.
+These five together are what makes $6/user/month achievable; without them you are at $15–25 trivially. The cost calculator (PoC #1) lets you plug in real numbers and see exactly where each lever bites.
 
 ---
 
@@ -337,20 +338,24 @@ If the spike pushes inference cold-start cost above acceptable: pre-warmed infer
 
 For one capture, end-to-end, at production-shaped scale:
 
+Numbers verified against AWS pricing pages (us-east-1, retrieved May 2026); inference memory was undercounted in v0.1, so the per-capture figure rose from ~$0.00035 to ~$0.00046.
+
 | Stage | Cost component | $ per capture |
 |---|---|---|
-| Ingest gRPC | Fargate CPU-seconds | $0.0000003 |
+| Ingest gRPC | Fargate ARM compute, amortized | $0.0000010 |
 | S3 PUT (raw) | Request + 5 MB transfer | $0.0000050 |
 | SQS message | $0.0000004 ($0.40/M) | $0.0000004 |
-| Processor work | Fargate Spot CPU-seconds | $0.0000200 |
+| Processor work | Fargate Spot ARM CPU-seconds | $0.0000100 |
 | S3 GET (raw) | Request | $0.0000004 |
-| Inference | Fargate CPU-seconds, 15s @ 2 vCPU | $0.0003000 |
-| S3 PUT (derived) | Request + 100 KB | $0.0000060 |
+| Inference | 15s @ 2 vCPU / 4 GB on-demand (x86) | $0.0004100 |
+| S3 PUT (derived) | Request + 100 KB | $0.0000050 |
 | Postgres write | Amortized | $0.0000050 |
 | Observability | Traces+metrics+logs amortized | $0.0000200 |
-| **Total per capture** | | **~$0.00035** |
+| **Total per capture** | | **~$0.00046** |
 
-At 3 captures/user/day × 30 days = 90 captures/user/month = **$0.032/user/month for compute + transactions**.
+(On ARM/Graviton inference, where the model can ship ARM artifacts, the per-capture figure drops to ~$0.00038.)
+
+At 3 captures/user/day × 30 days = 90 captures/user/month = **$0.041/user/month for compute + transactions**.
 
 Storage at 5 MB/capture (compressed) × 90/month = 450 MB/user/month new data:
 - First 30d hot: 450 MB × $0.023 = $0.010
@@ -359,7 +364,7 @@ Storage at 5 MB/capture (compressed) × 90/month = 450 MB/user/month new data:
 
 Storage steady-state ≈ $0.07/user/month at year 2.
 
-**Compute + storage subtotal: ~$0.10/user/month.** The remaining $5.90 of the $6 budget absorbs egress, observability overhead, RDS, support tooling, and headroom. The architecture has slack — but only because of the four levers in §4.6. Removing tiering alone pushes year-2 storage above $0.30/user/month and the budget gets tight fast.
+**All-in subtotal: ~$0.14/user/month** (compute + transactions $0.041, tiered storage $0.07, RDS $0.007, observability $0.02, egress + NAT/control-plane $0.002). The remaining ~$5.86 of the $6 budget absorbs dev/staging environments, security tooling, support, and ML training compute. The architecture has slack — but only because of the five levers in §4.6. Removing tiering alone pushes year-2 storage above $0.30/user/month and the budget gets tight fast.
 
 ---
 

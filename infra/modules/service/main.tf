@@ -89,16 +89,7 @@ resource "aws_ecs_service" "this" {
   network_configuration {
     subnets          = var.subnet_ids
     security_groups  = var.security_group_ids
-    assign_public_ip = var.assign_public_ip
-  }
-
-  dynamic "load_balancer" {
-    for_each = var.target_group_arn == null ? [] : [var.target_group_arn]
-    content {
-      target_group_arn = load_balancer.value
-      container_name   = var.name
-      container_port   = var.container_port
-    }
+    assign_public_ip = false
   }
 
   lifecycle { ignore_changes = [desired_count] }

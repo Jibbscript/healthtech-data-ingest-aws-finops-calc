@@ -10,6 +10,7 @@ import (
 	"github.com/jibbscript/throne-backend-poc/internal/domain"
 	thronev1 "github.com/jibbscript/throne-backend-poc/internal/gen/throne/v1"
 	"github.com/jibbscript/throne-backend-poc/internal/platform/localaws"
+	"github.com/jibbscript/throne-backend-poc/internal/protomap"
 	"github.com/jibbscript/throne-backend-poc/internal/store"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -62,7 +63,7 @@ func (g *GRPCServer) ListCaptures(ctx context.Context, req *thronev1.ListCapture
 	}
 	out := make([]*thronev1.Capture, 0, len(items))
 	for _, item := range items {
-		out = append(out, captureToProto(item))
+		out = append(out, protomap.CaptureToProto(item))
 	}
 	return &thronev1.ListCapturesResponse{Captures: out, NextCursor: next}, nil
 }
@@ -81,7 +82,7 @@ func (g *GRPCServer) GetCapture(ctx context.Context, req *thronev1.GetCaptureReq
 	if err := g.audit(ctx, "api.get_capture", req.GetCaptureId()); err != nil {
 		return nil, err
 	}
-	return &thronev1.GetCaptureResponse{Capture: captureToProto(capture)}, nil
+	return &thronev1.GetCaptureResponse{Capture: protomap.CaptureToProto(capture)}, nil
 }
 
 func (g *GRPCServer) GetFinding(ctx context.Context, req *thronev1.GetFindingRequest) (*thronev1.GetFindingResponse, error) {
@@ -130,19 +131,6 @@ func (g *GRPCServer) audit(ctx context.Context, action string, resource string) 
 		return status.Error(codes.Internal, "internal error")
 	}
 	return nil
-}
-
-func captureToProto(c domain.Capture) *thronev1.Capture {
-	return &thronev1.Capture{
-		Id:          c.ID,
-		UserId:      c.UserID,
-		DeviceId:    c.DeviceID,
-		S3Key:       c.S3Key,
-		ContentHash: c.ContentHash,
-		SizeBytes:   c.SizeBytes,
-		Status:      string(c.Status),
-		CapturedAt:  timestamppb.New(c.CapturedAt),
-	}
 }
 
 func findingToProto(f domain.Finding) *thronev1.Finding {

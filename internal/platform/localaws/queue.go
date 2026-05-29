@@ -16,7 +16,6 @@ type QueuedMessage struct {
 	ID         string            `json:"id"`
 	Job        domain.IngestJob  `json:"job"`
 	Attributes map[string]string `json:"attributes,omitempty"`
-	Attempts   int               `json:"attempts"`
 	CreatedAt  time.Time         `json:"created_at"`
 }
 
@@ -72,7 +71,10 @@ func (q *Queue) Receive(ctx context.Context, limit int) ([]QueuedMessage, error)
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
 	out := make([]QueuedMessage, 0, limit)
 	for _, e := range entries {
-		if len(out) >= limit || e.IsDir() {
+		if len(out) >= limit {
+			break
+		}
+		if e.IsDir() {
 			continue
 		}
 		b, err := os.ReadFile(filepath.Join(q.dir, "pending", e.Name()))

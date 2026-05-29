@@ -14,12 +14,11 @@ import (
 var ErrPermanent = errors.New("permanent inference rejection")
 
 type Service struct {
-	Latency      time.Duration
-	ModelVersion string
+	Latency time.Duration
 }
 
 func New(latency time.Duration) *Service {
-	return &Service{Latency: latency, ModelVersion: "stub-sha256-v1"}
+	return &Service{Latency: latency}
 }
 
 func (s *Service) Infer(ctx context.Context, req domain.InferRequest, payload []byte) (domain.Finding, error) {

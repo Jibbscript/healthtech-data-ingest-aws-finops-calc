@@ -64,10 +64,7 @@ type IngestJob struct {
 }
 
 type InferRequest struct {
-	CaptureID    string `json:"capture_id"`
-	S3Key        string `json:"s3_key"`
-	ModelVersion string `json:"model_version"`
-	ContentHash  string `json:"content_hash"`
+	CaptureID string `json:"capture_id"`
 }
 
 type Pricing struct {

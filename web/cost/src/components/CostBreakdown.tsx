@@ -1,28 +1,14 @@
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { currency } from '../format';
 import type { CostBreakdown as Breakdown } from '../model/cost-model';
+import { CATEGORY_COLORS, aggregateCategories } from './categories';
 
 interface CostBreakdownProps {
   breakdown: Breakdown;
 }
 
-const colors = {
-  compute: '#2563eb',
-  storage: '#059669',
-  rds: '#7c3aed',
-  network: '#ea580c',
-  ops: '#475569',
-};
-
 export function CostBreakdown({ breakdown }: CostBreakdownProps) {
-  const row = {
-    name: 'Monthly',
-    compute: breakdown.categories.inference + breakdown.categories.processor,
-    storage: breakdown.categories.storageStandard + breakdown.categories.storageIa + breakdown.categories.storageGlacier,
-    rds: breakdown.categories.rds,
-    network: breakdown.categories.dataTransfer + breakdown.categories.sqs,
-    ops: breakdown.categories.observability + breakdown.categories.fixed,
-  };
+  const row = { name: 'Monthly', ...aggregateCategories(breakdown.categories) };
 
   return (
     <section className="card" aria-labelledby="breakdown-heading">
@@ -34,11 +20,11 @@ export function CostBreakdown({ breakdown }: CostBreakdownProps) {
           <YAxis tickFormatter={(value) => currency(Number(value))} />
           <Tooltip formatter={(value, name) => [`${currency(Number(value))} (${((Number(value) / breakdown.monthlyCost) * 100).toFixed(1)}%)`, name]} />
           <Legend />
-          <Bar dataKey="compute" stackId="cost" fill={colors.compute} />
-          <Bar dataKey="storage" stackId="cost" fill={colors.storage} />
-          <Bar dataKey="rds" stackId="cost" fill={colors.rds} />
-          <Bar dataKey="network" stackId="cost" fill={colors.network} />
-          <Bar dataKey="ops" stackId="cost" fill={colors.ops} />
+          <Bar dataKey="compute" stackId="cost" fill={CATEGORY_COLORS.compute} />
+          <Bar dataKey="storage" stackId="cost" fill={CATEGORY_COLORS.storage} />
+          <Bar dataKey="rds" stackId="cost" fill={CATEGORY_COLORS.rds} />
+          <Bar dataKey="network" stackId="cost" fill={CATEGORY_COLORS.network} />
+          <Bar dataKey="ops" stackId="cost" fill={CATEGORY_COLORS.ops} />
         </BarChart>
       </ResponsiveContainer>
       <dl className="summary-list">
