@@ -14,7 +14,9 @@ jobs:
         with:
           go-version: '1.23'
           cache: true
-      - run: make proto
+      # Build/test against the committed internal/gen stubs. Proto regeneration
+      # and drift checking are owned by the dedicated proto.yml workflow, which
+      # installs buf; this job must not require the proto toolchain.
       - run: go test ./...
       - run: go build ./cmd/...
 
