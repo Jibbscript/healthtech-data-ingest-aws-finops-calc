@@ -5,7 +5,7 @@ PKGS := ./...
 
 .DEFAULT_GOAL := help
 
-.PHONY: help dev down test lint proto build seed load migrate demo refresh-pricing run-ingest run-api run-processor run-inference run-cost-api test-integration docker-config clean
+.PHONY: help dev down test lint proto build seed load migrate demo refresh-pricing run-ingest run-api run-processor run-inference run-cost-api test-integration docker-config one-pager clean
 
 help: ## Show available targets.
 	@awk 'BEGIN {FS = ":.*##"; printf "Targets:\n"} /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -67,6 +67,9 @@ docker-config: ## Validate docker-compose syntax.
 
 demo: ## Bring up dependencies, seed data, generate load, process it, and print demo URLs.
 	./scripts/demo.sh
+
+one-pager: ## Regenerate docs/one-pager.pdf from docs/one-pager.md (needs python3 + reportlab).
+	python3 scripts/build-one-pager-pdf.py
 
 clean: ## Remove local runtime data.
 	rm -rf $(DATA_DIR) .cache

@@ -70,7 +70,6 @@ export interface MonthlyProjectionPoint extends CostCategoryBreakdown {
 
 export interface CostBreakdown {
   inputs: CostInputs;
-  scenario: ScenarioOptions;
   monthlyCost: number;
   perUserMonthlyCost: number;
   ingestGbPerDay: number;
@@ -157,7 +156,6 @@ export function computeMonthlyCost(
 
   return {
     inputs: normalizedInputs,
-    scenario: effectiveScenario,
     monthlyCost,
     perUserMonthlyCost: monthlyCost / normalizedInputs.dau,
     ingestGbPerDay,
@@ -167,17 +165,12 @@ export function computeMonthlyCost(
 }
 
 export function computeScenarioDeltas(inputs: CostInputs, pricing: Pricing) {
-  const base = computeMonthlyCost(inputs, pricing, {
-    tiering: inputs.s3TieringEnabled,
-    spot: true,
-    compression: true,
-  });
-
+  const monthlyCost = (scenario: ScenarioOptions) => computeMonthlyCost(inputs, pricing, scenario).monthlyCost;
   return {
-    base,
-    withoutTiering: computeMonthlyCost(inputs, pricing, { tiering: false, spot: true, compression: true }),
-    withoutSpot: computeMonthlyCost(inputs, pricing, { tiering: inputs.s3TieringEnabled, spot: false, compression: true }),
-    withoutCompression: computeMonthlyCost(inputs, pricing, { tiering: inputs.s3TieringEnabled, spot: true, compression: false }),
+    base: monthlyCost({ tiering: inputs.s3TieringEnabled, spot: true, compression: true }),
+    withoutTiering: monthlyCost({ tiering: false, spot: true, compression: true }),
+    withoutSpot: monthlyCost({ tiering: inputs.s3TieringEnabled, spot: false, compression: true }),
+    withoutCompression: monthlyCost({ tiering: inputs.s3TieringEnabled, spot: true, compression: false }),
   };
 }
 
