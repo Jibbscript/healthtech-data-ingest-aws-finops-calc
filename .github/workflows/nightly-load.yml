@@ -14,17 +14,85 @@ on:
         required: false
         default: 1m
 
+permissions:
+  contents: read
+
 jobs:
   load:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Dispatch inputs are bound to env (never interpolated into run: scripts)
+      # and only referenced as quoted "$TARGET" / "$DURATION" below.
+      TARGET: ${{ inputs.target || 'http://localhost:8080' }}
+      DURATION: ${{ inputs.duration || '1m' }}
+      THRONE_DATA_DIR: ${{ github.workspace }}/.data
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23'
           cache: true
-      - name: Build load generator
-        run: go build -o /tmp/throne-load ./cmd/throne-load
+      - name: Build ingest service and load generator
+        run: |
+          go build -o /tmp/throne-ingest ./cmd/throne-ingest
+          go build -o /tmp/throne-load ./cmd/throne-load
+
+      # The load generator hardcodes the seeded demo device
+      # (user_demo/device_demo/DEV-THUMBPRINT), which only a locally-seeded
+      # throne-ingest allowlists -- so a seeded local ingest IS the system under
+      # test and is always started here. Without it, every capture is refused
+      # and the job would pass while exercising nothing. TARGET (default
+      # http://localhost:8080) just selects where the generator sends load.
+      - name: Start seeded ingest service
+        run: |
+          mkdir -p "$THRONE_DATA_DIR"
+          THRONE_SEED_DEMO_DATA=true THRONE_DATA_DIR="$THRONE_DATA_DIR" \
+            nohup /tmp/throne-ingest >"$THRONE_DATA_DIR/ingest.log" 2>&1 &
+          echo $! > "$THRONE_DATA_DIR/ingest.pid"
+      - name: Wait for ingest to pass /healthz
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/healthz >/dev/null; then
+              echo "ingest healthy after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::ingest did not pass /healthz within 30s"
+          cat "$THRONE_DATA_DIR/ingest.log" 2>/dev/null || true
+          exit 1
+
       - name: Run nightly light load
-        run: /tmp/throne-load --devices 10 --captures-per-device-per-day 3 --duration "${{ inputs.duration || '1m' }}" --target "${{ inputs.target || 'http://localhost:8080' }}"
+        run: |
+          set -o pipefail
+          /tmp/throne-load \
+            --devices 10 \
+            --captures-per-device-per-day 3 \
+            --duration "$DURATION" \
+            --target "$TARGET" | tee "$THRONE_DATA_DIR/load-result.txt"
+      - name: Assert captures were accepted
+        run: |
+          result="$(cat "$THRONE_DATA_DIR/load-result.txt")"
+          sent="$(printf '%s' "$result" | sed -n 's/.*sent=\([0-9][0-9]*\).*/\1/p')"
+          failed="$(printf '%s' "$result" | sed -n 's/.*failed=\([0-9][0-9]*\).*/\1/p')"
+          echo "sent=${sent:-?} failed=${failed:-?}"
+          if [ -z "$sent" ] || [ "$sent" -le 0 ]; then
+            echo "::error::nightly load accepted zero captures -- the ingest path is broken"
+            cat "$THRONE_DATA_DIR/ingest.log" 2>/dev/null || true
+            exit 1
+          fi
+
+      - name: Stop ingest service
+        if: always()
+        run: |
+          if [ -f "$THRONE_DATA_DIR/ingest.pid" ]; then
+            kill "$(cat "$THRONE_DATA_DIR/ingest.pid")" 2>/dev/null || true
+          fi
+      - name: Upload ingest log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ingest-log
+          path: ${{ env.THRONE_DATA_DIR }}/ingest.log
+          if-no-files-found: ignore
