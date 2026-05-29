@@ -13,25 +13,16 @@ export function usePricing(): PricingState {
 
   useEffect(() => {
     let alive = true;
-    loadPricing()
-      .then((result) => {
-        if (!alive) return;
-        setState({
-          pricing: result.pricing,
-          loading: false,
-          warning: pricingWarning(result.source, result.errors.length),
-        });
-      })
-      .catch((error: unknown) => {
-        if (!alive) return;
-        setState({
-          pricing: DEFAULT_PRICING,
-          loading: false,
-          warning: `Using bundled pricing snapshot because pricing could not be loaded: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        });
+    // loadPricing resolves with a fallback result even when every endpoint
+    // fails (it uses Promise.allSettled), so there is no rejection to catch.
+    loadPricing().then((result) => {
+      if (!alive) return;
+      setState({
+        pricing: result.pricing,
+        loading: false,
+        warning: pricingWarning(result.source, result.errors.length),
       });
+    });
 
     return () => {
       alive = false;

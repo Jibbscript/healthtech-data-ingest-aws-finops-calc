@@ -19,6 +19,7 @@ Use `Throne Live Cost Dashboard` to connect real ingest telemetry to unit econom
 
 - S3 lifecycle tiering: largest storage lever; keep Standard → IA at 30d and IA → Glacier IR at 90d unless product needs hot history.
 - Compression: reduces S3, data transfer, and processing cost together.
+- ARM/Graviton fleet: ~20% off Fargate compute across ingest, processor, inference, and API on a single Go recompile.
 - Fargate right-sizing: profile p95 CPU/memory and set requests with ~20% headroom.
 - Fargate Spot: safe for processor workers because SQS redelivers; do not use for latency-sensitive inference without canary data.
 

@@ -2,7 +2,6 @@ package ingest
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"path"
@@ -19,6 +18,17 @@ const (
 	DefaultMaxPayload = 20 << 20
 	DefaultRawBucket  = "throne-raw-local"
 )
+
+// ValidationError marks a capture rejected for bad client input, as opposed to
+// a server-side infrastructure failure. Transports map it to 400 / InvalidArgument;
+// all other errors map to 500 / Internal.
+type ValidationError struct{ msg string }
+
+func (e ValidationError) Error() string { return e.msg }
+
+func invalid(format string, args ...any) ValidationError {
+	return ValidationError{msg: fmt.Sprintf(format, args...)}
+}
 
 type CaptureRequest struct {
 	CaptureID   string
@@ -59,16 +69,16 @@ func New(st *store.Store, blob *localaws.BlobStore, q *localaws.Queue, logger *s
 
 func (s *Service) Capture(ctx context.Context, req CaptureRequest) (CaptureAck, error) {
 	if req.UserID == "" || req.DeviceID == "" {
-		return CaptureAck{}, errors.New("user_id and device_id are required")
+		return CaptureAck{}, invalid("user_id and device_id are required")
 	}
 	if len(req.Data) == 0 {
-		return CaptureAck{}, errors.New("payload is empty")
+		return CaptureAck{}, invalid("payload is empty")
 	}
 	if len(req.Data) > s.maxPayload() {
-		return CaptureAck{}, fmt.Errorf("payload exceeds max %d bytes", s.maxPayload())
+		return CaptureAck{}, invalid("payload exceeds max %d bytes", s.maxPayload())
 	}
 	if !s.Store.DeviceAllowedForUser(req.UserID, req.DeviceID, req.Thumbprint) {
-		return CaptureAck{}, errors.New("device certificate is not allowlisted")
+		return CaptureAck{}, invalid("device certificate is not allowlisted")
 	}
 	if req.CaptureID == "" {
 		id, err := domain.NewID("capture")
@@ -105,9 +115,6 @@ func (s *Service) Capture(ctx context.Context, req CaptureRequest) (CaptureAck, 
 }
 
 func (s *Service) RecordRequest(code string) {
-	if code == "" {
-		code = "error"
-	}
 	s.metrics.mu.Lock()
 	defer s.metrics.mu.Unlock()
 	if s.metrics.requests == nil {

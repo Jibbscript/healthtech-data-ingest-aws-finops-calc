@@ -60,7 +60,7 @@ func (p *Processor) Process(ctx context.Context, msg localaws.QueuedMessage) err
 	}
 	callCtx, cancel := context.WithTimeout(ctx, p.Deadline)
 	defer cancel()
-	finding, err := p.Infer.Infer(callCtx, domain.InferRequest{CaptureID: msg.Job.CaptureID, S3Key: msg.Job.S3Key, ModelVersion: p.Infer.ModelVersion, ContentHash: msg.Job.ContentHash}, payload)
+	finding, err := p.Infer.Infer(callCtx, domain.InferRequest{CaptureID: msg.Job.CaptureID}, payload)
 	if err != nil {
 		if errors.Is(err, inference.ErrPermanent) {
 			id, idErr := domain.NewID("finding")

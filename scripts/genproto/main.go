@@ -32,6 +32,9 @@ func run() error {
 	if err := cmd.Run(); err != nil {
 		return err
 	}
+	// buf/protoc-gen-openapiv2 emits the merged spec as throne.swagger.json;
+	// rename it to the committed throne.v1.swagger.json name the artifacts
+	// contract (and api/openapi consumers) expect.
 	if _, err := os.Stat("api/openapi/throne.swagger.json"); err == nil {
 		if err := os.Rename("api/openapi/throne.swagger.json", "api/openapi/throne.v1.swagger.json"); err != nil {
 			return err

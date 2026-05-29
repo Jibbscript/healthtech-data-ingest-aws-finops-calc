@@ -17,9 +17,8 @@ type contextKey string
 const userIDKey contextKey = "user_id"
 
 type Claims struct {
-	UserID string   `json:"user_id"`
-	Scopes []string `json:"scopes"`
-	Exp    int64    `json:"exp"`
+	UserID string `json:"user_id"`
+	Exp    int64  `json:"exp"`
 }
 
 func SignHS256(secret string, claims Claims) (string, error) {

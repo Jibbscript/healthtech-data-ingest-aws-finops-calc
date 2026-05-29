@@ -18,7 +18,7 @@ services:
   localstack:
     image: localstack/localstack:3
     environment:
-      SERVICES: s3,sqs,ssm,kms,dynamodb
+      SERVICES: s3,sqs,ssm
       DEFAULT_REGION: us-east-1
       DEBUG: "0"
     ports:

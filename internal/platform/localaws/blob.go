@@ -30,9 +30,9 @@ func (b *BlobStore) Put(ctx context.Context, key string, payload []byte) (string
 		return "", ctx.Err()
 	default:
 	}
-	clean := cleanKey(key)
-	if strings.HasPrefix(clean, "..") {
-		return "", fmt.Errorf("invalid key %q", key)
+	clean, err := cleanKey(key)
+	if err != nil {
+		return "", err
 	}
 	path := filepath.Join(b.root, b.bucket, clean)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -51,7 +51,11 @@ func (b *BlobStore) Get(ctx context.Context, key string) ([]byte, error) {
 		return nil, ctx.Err()
 	default:
 	}
-	return os.ReadFile(filepath.Join(b.root, b.bucket, cleanKey(key)))
+	clean, err := cleanKey(key)
+	if err != nil {
+		return nil, err
+	}
+	return os.ReadFile(filepath.Join(b.root, b.bucket, clean))
 }
 
 func (b *BlobStore) Presign(key string, ttl time.Duration) string {
@@ -62,4 +66,10 @@ func (b *BlobStore) Presign(key string, ttl time.Duration) string {
 	return "local-s3://download?" + v.Encode()
 }
 
-func cleanKey(key string) string { return filepath.Clean("/" + key)[1:] }
+func cleanKey(key string) (string, error) {
+	clean := filepath.Clean("/" + key)[1:]
+	if strings.HasPrefix(clean, "..") {
+		return "", fmt.Errorf("invalid key %q", key)
+	}
+	return clean, nil
+}

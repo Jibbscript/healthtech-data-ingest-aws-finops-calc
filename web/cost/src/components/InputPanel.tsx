@@ -9,6 +9,9 @@ interface InputPanelProps {
   onChange: (inputs: CostInputs) => void;
 }
 
+// These min/max bounds are deliberate product ranges for the sliders and are
+// intentionally tighter than the model's safety clamps in normalizeInputs
+// (e.g. DAU starts at 100 here, the model accepts down to 1).
 const numberFields: Array<{ key: NumericKey; label: string; min: number; max: number; step: number; help: string }> = [
   { key: 'dau', label: 'DAU', min: 100, max: 1_000_000, step: 100, help: 'Daily active users' },
   { key: 'capturesPerUserPerDay', label: 'Captures/user/day', min: 1, max: 10, step: 1, help: 'Capture frequency per active user' },

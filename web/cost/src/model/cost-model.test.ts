@@ -7,7 +7,7 @@ describe('computeMonthlyCost', () => {
 
     expect(result.perUserMonthlyCost).toBeLessThan(6);
     expect(result.ingestGbPerDay).toBeCloseTo(0.8789, 3);
-    expect(result.storage.glacierGb).toBeGreaterThan(result.storage.standardGb);
+    expect(result.categories.storageGlacier).toBeGreaterThan(result.categories.storageStandard);
   });
 
   it('handles 100k DAU with tiering and compression without crossing the target', () => {
@@ -15,7 +15,7 @@ describe('computeMonthlyCost', () => {
 
     expect(result.monthlyCost).toBeGreaterThan(5_000);
     expect(result.perUserMonthlyCost).toBeLessThan(1);
-    expect(result.storage.glacierGb).toBeGreaterThan(0);
+    expect(result.categories.storageGlacier).toBeGreaterThan(0);
   });
 
   it('makes no-tiering storage materially more expensive at year two', () => {
@@ -54,8 +54,10 @@ describe('computeMonthlyCost', () => {
     const compressed = computeMonthlyCost(DEFAULT_INPUTS, DEFAULT_PRICING, { tiering: true, spot: true, compression: true });
     const raw = computeMonthlyCost(DEFAULT_INPUTS, DEFAULT_PRICING, { tiering: true, spot: true, compression: false });
 
+    const totalStorageCost = (r: typeof raw) =>
+      r.categories.storageStandard + r.categories.storageIa + r.categories.storageGlacier;
     expect(raw.ingestGbPerDay).toBeCloseTo(compressed.ingestGbPerDay * DEFAULT_PRICING.compressionRatio, 6);
-    expect(raw.storage.monthlyCost).toBeGreaterThan(compressed.storage.monthlyCost);
+    expect(totalStorageCost(raw)).toBeGreaterThan(totalStorageCost(compressed));
   });
 
   it('clamps invalid boundary inputs into supported ranges', () => {

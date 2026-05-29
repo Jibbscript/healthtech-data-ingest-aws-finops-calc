@@ -1,6 +1,7 @@
 import { Area, AreaChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { currency } from '../format';
 import type { CostBreakdown } from '../model/cost-model';
+import { CATEGORY_COLORS, aggregateCategories } from './categories';
 
 interface ProjectionChartProps {
   breakdown: CostBreakdown;
@@ -9,11 +10,7 @@ interface ProjectionChartProps {
 export function ProjectionChart({ breakdown }: ProjectionChartProps) {
   const data = breakdown.projections.map((point) => ({
     month: point.month,
-    compute: point.inference + point.processor,
-    storage: point.storageStandard + point.storageIa + point.storageGlacier,
-    rds: point.rds,
-    network: point.dataTransfer + point.sqs,
-    ops: point.observability + point.fixed,
+    ...aggregateCategories(point),
     total: point.total,
   }));
 
@@ -27,11 +24,11 @@ export function ProjectionChart({ breakdown }: ProjectionChartProps) {
           <YAxis tickFormatter={(value) => currency(Number(value))} />
           <Tooltip formatter={(value, name) => [currency(Number(value)), name]} labelFormatter={(label) => `Month ${label}`} />
           <Legend />
-          <Area type="monotone" dataKey="compute" stackId="1" stroke="#2563eb" fill="#93c5fd" />
-          <Area type="monotone" dataKey="storage" stackId="1" stroke="#059669" fill="#86efac" />
-          <Area type="monotone" dataKey="rds" stackId="1" stroke="#7c3aed" fill="#c4b5fd" />
-          <Area type="monotone" dataKey="network" stackId="1" stroke="#ea580c" fill="#fdba74" />
-          <Area type="monotone" dataKey="ops" stackId="1" stroke="#475569" fill="#cbd5e1" />
+          <Area type="monotone" dataKey="compute" stackId="1" stroke={CATEGORY_COLORS.compute} fill="#93c5fd" />
+          <Area type="monotone" dataKey="storage" stackId="1" stroke={CATEGORY_COLORS.storage} fill="#86efac" />
+          <Area type="monotone" dataKey="rds" stackId="1" stroke={CATEGORY_COLORS.rds} fill="#c4b5fd" />
+          <Area type="monotone" dataKey="network" stackId="1" stroke={CATEGORY_COLORS.network} fill="#fdba74" />
+          <Area type="monotone" dataKey="ops" stackId="1" stroke={CATEGORY_COLORS.ops} fill="#cbd5e1" />
         </AreaChart>
       </ResponsiveContainer>
     </section>

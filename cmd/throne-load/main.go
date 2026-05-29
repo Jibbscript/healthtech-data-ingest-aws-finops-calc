@@ -16,7 +16,7 @@ func main() {
 	var dur string
 	var metricsAddr string
 	var capturesPerDevicePerDay float64
-	var sent, failed atomic.Int64
+	var total, failed atomic.Int64
 	var totalLatencyMillis atomic.Int64
 
 	flag.IntVar(&cfg.Devices, "devices", 10, "number of simulated devices")
@@ -37,20 +37,23 @@ func main() {
 		cfg.RatePerDevice = capturesPerDevicePerDay / cfg.Duration.Seconds()
 	}
 	cfg.OnResult = func(success bool, latency time.Duration) {
-		if success {
-			sent.Add(1)
-		} else {
+		total.Add(1)
+		if !success {
 			failed.Add(1)
 		}
 		totalLatencyMillis.Add(latency.Milliseconds())
 	}
 
 	metricsSrv := &http.Server{Addr: metricsAddr, Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		s := sent.Load()
+		// Load failed before total so the derived sent count (t-f) can never go
+		// negative under concurrent OnResult updates, which increment total
+		// before failed.
 		f := failed.Load()
+		t := total.Load()
+		s := t - f
 		avg := int64(0)
-		if s+f > 0 {
-			avg = totalLatencyMillis.Load() / (s + f)
+		if t > 0 {
+			avg = totalLatencyMillis.Load() / t
 		}
 		_, _ = fmt.Fprintf(w, "# HELP throne_load_captures_sent_total Synthetic captures sent successfully\n# TYPE throne_load_captures_sent_total counter\nthrone_load_captures_sent_total %d\n# HELP throne_load_captures_failed_total Synthetic captures that failed\n# TYPE throne_load_captures_failed_total counter\nthrone_load_captures_failed_total %d\n# HELP throne_load_average_latency_ms Average synthetic upload latency\n# TYPE throne_load_average_latency_ms gauge\nthrone_load_average_latency_ms %d\n", s, f, avg)
 	})}

@@ -7,11 +7,64 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/jibbscript/throne-backend-poc/internal/ingest"
 	"github.com/jibbscript/throne-backend-poc/internal/platform/localaws"
 	"github.com/jibbscript/throne-backend-poc/internal/store"
 )
+
+func seedCapture(t *testing.T, dir string) (*store.Store, *localaws.BlobStore) {
+	t.Helper()
+	st := store.New(dir)
+	if err := st.SeedDemo(); err != nil {
+		t.Fatal(err)
+	}
+	raw := localaws.NewBlobStore(dir, ingest.DefaultRawBucket)
+	if _, err := ingest.New(st, raw, localaws.NewQueue(dir, "jobs"), nil).Capture(context.Background(), ingest.CaptureRequest{CaptureID: "cap-api", UserID: "user_demo", DeviceID: "device_demo", Thumbprint: "DEV-THUMBPRINT", Data: []byte("payload")}); err != nil {
+		t.Fatal(err)
+	}
+	return st, raw
+}
+
+func TestCrossUserReadIsForbidden(t *testing.T) {
+	st, raw := seedCapture(t, t.TempDir())
+	token, _ := SignHS256("s", Claims{UserID: "someone_else"})
+	h := (&Server{Store: st, Raw: raw, Secret: "s"}).Handler()
+	req := httptest.NewRequest(http.MethodGet, "/v1/captures/cap-api", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("want 403 for cross-user read, got %d body=%s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestExpiredTokenIsRejected(t *testing.T) {
+	st, raw := seedCapture(t, t.TempDir())
+	token, _ := SignHS256("s", Claims{UserID: "user_demo", Exp: time.Now().Add(-time.Hour).Unix()})
+	h := (&Server{Store: st, Raw: raw, Secret: "s"}).Handler()
+	req := httptest.NewRequest(http.MethodGet, "/v1/captures/cap-api", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("want 401 for expired token, got %d", rr.Code)
+	}
+}
+
+func TestTamperedSignatureIsRejected(t *testing.T) {
+	token, _ := SignHS256("s", Claims{UserID: "user_demo"})
+	last := token[len(token)-1]
+	flip := byte('A')
+	if last == 'A' {
+		flip = 'B'
+	}
+	tampered := token[:len(token)-1] + string(flip)
+	if _, err := VerifyHS256("s", tampered); err == nil {
+		t.Fatal("expected tampered signature to be rejected")
+	}
+}
 
 func TestJWTAndCaptureAuthorization(t *testing.T) {
 	dir := t.TempDir()

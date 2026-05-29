@@ -4,8 +4,8 @@ variable "env" { type = string }
 variable "data_class" {
   type = string
   validation {
-    condition     = contains(["phi", "standard", "telemetry"], var.data_class)
-    error_message = "data_class must be phi, standard, or telemetry."
+    condition     = contains(["phi", "standard"], var.data_class)
+    error_message = "data_class must be phi or standard."
   }
 }
 variable "lifecycle_rules" {

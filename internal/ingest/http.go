@@ -2,6 +2,7 @@ package ingest
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,8 +28,14 @@ func (s *Service) Handler() http.Handler {
 		req := CaptureRequest{CaptureID: r.URL.Query().Get("capture_id"), UserID: r.URL.Query().Get("user_id"), DeviceID: r.URL.Query().Get("device_id"), Data: body, CapturedAt: time.Now().UTC(), Traceparent: r.Header.Get("traceparent"), Thumbprint: r.Header.Get("x-device-thumbprint")}
 		ack, err := s.Capture(r.Context(), req)
 		if err != nil {
-			s.RecordRequest("4xx")
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			var ve ValidationError
+			if errors.As(err, &ve) {
+				s.RecordRequest("4xx")
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			s.RecordRequest("5xx")
+			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
 		s.RecordRequest("2xx")
