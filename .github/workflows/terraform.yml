@@ -39,6 +39,9 @@ jobs:
           tflint --recursive --config "$PWD/.tflint.hcl"
       # tfsec is EOL (folded into Trivy). exit-code: '1' keeps this a blocking
       # gate (tfsec-action failed on findings; trivy-action defaults to 0).
+      # version pins the Trivy CLI for deterministic scans -- it is the version
+      # infra/.trivyignore's AVD IDs were validated against, so a future Trivy
+      # release adding checks cannot silently break this gate.
       - name: Trivy IaC misconfiguration scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -48,3 +51,4 @@ jobs:
           severity: LOW,MEDIUM,HIGH,CRITICAL
           exit-code: '1'
           hide-progress: true
+          version: v0.70.0
