@@ -28,8 +28,8 @@ jobs:
       DURATION: ${{ inputs.duration || '1m' }}
       THRONE_DATA_DIR: ${{ github.workspace }}/.data
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.23'
           cache: true
@@ -91,7 +91,7 @@ jobs:
           fi
       - name: Upload ingest log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nightly-ingest-log
           path: ${{ env.THRONE_DATA_DIR }}/ingest.log
