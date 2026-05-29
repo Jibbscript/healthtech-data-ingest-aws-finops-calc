@@ -139,7 +139,7 @@ estimates are 50%-confidence — multiply by ~1.4 for 80% confidence per standar
 - variables file with environment defaults
 - DoD: `terraform apply` from clean state succeeds in <10 min; `terraform destroy` succeeds
 
-### 2.9 — tflint + tfsec CI [25m] [→2.8]
+### 2.9 — tflint + Trivy CI [25m] [→2.8]
 - GitHub Actions: lint, security scan, `terraform fmt -check`, `terraform validate`
 - DoD: PR that breaks fmt fails; PR with insecure rule fails (e.g., public S3 bucket)
 

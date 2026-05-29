@@ -1,0 +1,23 @@
+# Trivy misconfiguration ignores for the Throne PoC infra.
+# Documented dev/PoC exceptions, migrated 1:1 from the former tfsec exclude
+# list (infra/.tfsec.yml). Each is an intentional PoC choice to revisit before
+# production hardening. tfsec check name shown in parentheses for traceability.
+
+# Dev DB keeps cost low; revisit before prod. (aws-rds-enable-performance-insights)
+AVD-AWS-0133
+# Dev ECS tasks need package/OTLP egress until endpoints are complete. (aws-ec2-no-public-egress-sgr)
+AVD-AWS-0104
+# Public ALB ingress is intentional for the demo edge. (aws-ec2-no-public-ingress-sgr)
+AVD-AWS-0107
+# Public subnets exist for ALB/NAT; tasks remain private. (aws-ec2-no-public-ip-subnet)
+AVD-AWS-0164
+# Password auth via SSM is the PoC path; IAM auth is a prod hardening item. (aws-rds-enable-iam-auth)
+AVD-AWS-0176
+# Dev sandbox must be destroyable. (aws-rds-enable-deletion-protection)
+AVD-AWS-0177
+# Deferred to prod hardening to avoid noisy dev log spend. (aws-ec2-require-vpc-flow-logs-for-all-vpcs)
+AVD-AWS-0178
+# Deferred for PoC; CloudTrail/server logs are prod hardening. (aws-s3-enable-bucket-logging)
+AVD-AWS-0089
+# Dev log groups use service-managed encryption for cost/simplicity. (aws-cloudwatch-log-group-customer-key)
+AVD-AWS-0017

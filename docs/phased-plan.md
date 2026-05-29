@@ -65,7 +65,7 @@ This is intentional — phases must not be entangled, because the atomic-decompo
 - `infra/modules/observability/` — CloudWatch log groups, baseline alarms (DLQ depth, error rate), Grafana datasources as code
 - `infra/envs/dev/main.tf` — composes the above for a single dev environment
 - Backend state in S3 + DynamoDB lock table (or local backend for PoC if AWS unavailable)
-- `tflint`, `tfsec` configs; both pass
+- `tflint`, `Trivy` configs; both pass
 
 **Acceptance.** `cd infra/envs/dev && terraform apply` succeeds against either real AWS or localstack. Resources visible. State file written.
 
